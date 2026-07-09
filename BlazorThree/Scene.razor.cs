@@ -66,8 +66,23 @@ public partial class Scene
 
         if (module is not null && sceneId is not null)
         {
-            await module.InvokeVoidAsync("disposeScene", sceneId);
-            await module.DisposeAsync();
+            try
+            {
+                await module.InvokeVoidAsync("disposeScene", sceneId);
+            }
+            catch (JSDisconnectedException)
+            {
+                // Ignore disconnection during teardown.
+            }
+
+            try
+            {
+                await module.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+                // Ignore disconnection during teardown.
+            }
         }
     }
 }

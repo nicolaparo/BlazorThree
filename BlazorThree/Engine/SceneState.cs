@@ -15,6 +15,8 @@ public sealed class SceneState
     public IReadOnlyList<TimelineState> Timelines { get; set; } = Array.Empty<TimelineState>();
 
     public IReadOnlyList<MeshState> Meshes { get; set; } = Array.Empty<MeshState>();
+
+    public IReadOnlyList<ModelState> Models { get; set; } = Array.Empty<ModelState>();
 }
 
 public sealed class CameraState
@@ -30,7 +32,7 @@ public sealed class CameraState
 
 public sealed class LightState
 {
-    public LightType Type { get; set; } = LightType.Directional;
+    public LightDefinition Type { get; set; } = LightDefinitions.Directional;
 
     public string Color { get; set; } = "#ffffff";
 
@@ -54,6 +56,35 @@ public sealed class MeshState
     public required object Material { get; set; }
 
     public OutlineState? Outline { get; set; }
+
+    public string? ClassName { get; set; }
+
+    public double PositionX { get; set; }
+
+    public double PositionY { get; set; }
+
+    public double PositionZ { get; set; }
+
+    public double RotationX { get; set; }
+
+    public double RotationY { get; set; }
+
+    public double RotationZ { get; set; }
+
+    public double ScaleX { get; set; } = 1;
+
+    public double ScaleY { get; set; } = 1;
+
+    public double ScaleZ { get; set; } = 1;
+}
+
+public sealed class ModelState
+{
+    public required string Id { get; set; }
+
+    public string? ParentId { get; set; }
+
+    public string SourceUrl { get; set; } = string.Empty;
 
     public string? ClassName { get; set; }
 

@@ -6,6 +6,8 @@ public sealed class SceneContext
 
     private readonly Dictionary<string, MeshState> meshes = new(StringComparer.Ordinal);
 
+    private readonly Dictionary<string, ModelState> models = new(StringComparer.Ordinal);
+
     private readonly Dictionary<string, TransitionState> transitions = new(StringComparer.Ordinal);
 
     private readonly Dictionary<string, TimelineState> timelines = new(StringComparer.Ordinal);
@@ -39,6 +41,12 @@ public sealed class SceneContext
     public void UpsertMesh(MeshState state)
     {
         meshes[state.Id] = state;
+        Changed?.Invoke();
+    }
+
+    public void UpsertModel(ModelState state)
+    {
+        models[state.Id] = state;
         Changed?.Invoke();
     }
 
@@ -92,6 +100,14 @@ public sealed class SceneContext
         }
     }
 
+    public void RemoveModel(string id)
+    {
+        if (models.Remove(id))
+        {
+            Changed?.Invoke();
+        }
+    }
+
     public SceneState BuildState()
     {
         return new SceneState
@@ -102,7 +118,8 @@ public sealed class SceneContext
             Groups = groups.Values.ToArray(),
             Transitions = transitions.Values.ToArray(),
             Timelines = timelines.Values.ToArray(),
-            Meshes = meshes.Values.ToArray()
+            Meshes = meshes.Values.ToArray(),
+            Models = models.Values.ToArray()
         };
     }
 }

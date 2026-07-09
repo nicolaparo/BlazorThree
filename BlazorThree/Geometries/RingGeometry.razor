@@ -1,0 +1,37 @@
+@namespace BlazorThree.Geometries
+
+@code {
+    [CascadingParameter]
+    public MeshContext? MeshContext { get; set; }
+
+    [Parameter]
+    public double InnerRadius { get; set; } = 0.5;
+
+    [Parameter]
+    public double OuterRadius { get; set; } = 1;
+
+    [Parameter]
+    public int ThetaSegments { get; set; } = 32;
+
+    [Parameter]
+    public int PhiSegments { get; set; } = 1;
+
+    [Parameter]
+    public double ThetaStart { get; set; }
+
+    [Parameter]
+    public double ThetaLength { get; set; } = Math.PI * 2;
+
+    protected override void OnParametersSet()
+    {
+        MeshContext?.SetGeometry?.Invoke(new RingGeometryDefinition
+        {
+            InnerRadius = InnerRadius,
+            OuterRadius = OuterRadius,
+            ThetaSegments = ThetaSegments,
+            PhiSegments = PhiSegments,
+            ThetaStart = ThetaStart,
+            ThetaLength = ThetaLength
+        });
+    }
+}

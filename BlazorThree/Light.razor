@@ -3,7 +3,7 @@
     public SceneContext? SceneContext { get; set; }
 
     [Parameter]
-    public LightType Type { get; set; } = LightType.Directional;
+    public LightDefinition Type { get; set; } = LightDefinitions.Directional;
 
     [Parameter]
     public string Color { get; set; } = "#ffffff";

@@ -1,3 +1,5 @@
+using BlazorThree.Geometries;
+
 namespace BlazorThree.Engine;
 
 public sealed class MeshContext

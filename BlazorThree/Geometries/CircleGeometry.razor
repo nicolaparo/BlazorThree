@@ -1,0 +1,29 @@
+@namespace BlazorThree.Geometries
+
+@code {
+    [CascadingParameter]
+    public MeshContext? MeshContext { get; set; }
+
+    [Parameter]
+    public double Radius { get; set; } = 1;
+
+    [Parameter]
+    public int Segments { get; set; } = 32;
+
+    [Parameter]
+    public double ThetaStart { get; set; }
+
+    [Parameter]
+    public double ThetaLength { get; set; } = Math.PI * 2;
+
+    protected override void OnParametersSet()
+    {
+        MeshContext?.SetGeometry?.Invoke(new CircleGeometryDefinition
+        {
+            Radius = Radius,
+            Segments = Segments,
+            ThetaStart = ThetaStart,
+            ThetaLength = ThetaLength
+        });
+    }
+}

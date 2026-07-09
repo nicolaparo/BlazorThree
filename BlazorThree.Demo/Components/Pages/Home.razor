@@ -7,24 +7,37 @@
 <div class="scene-page">
     <Scene Width="100%" Height="100%" ClearColor="#101925">
         <Camera Fov="65" PositionX="0" PositionY="1.4" PositionZ="7" />
-        <Light Type="LightType.Directional" Intensity="1.6" PositionX="6" PositionY="8" PositionZ="3" />
+        <Light Type="LightDefinitions.Directional" Intensity="1.6" PositionX="6" PositionY="8" PositionZ="3" />
         <OrbitControls Enabled="true" EnableDamping="true" DampingFactor="0.09" />
 
         <Transition ClassName="stage-idle" DurationMs="550" Easing="easeInOutQuad" PositionY="0" RotationY="0" ScaleX="1" ScaleY="1" ScaleZ="1" />
         <Transition ClassName="stage-active" DurationMs="1200" Easing="easeOutCubic" PositionY="0.9" RotationY="1.8" ScaleX="1.2" ScaleY="1.2" ScaleZ="1.2" />
 
-        <Mesh PositionX="-1.6" PositionY="0" PositionZ="0" ClassName="@currentStageClass">
-            <BoxGeometry Width="1.4" Height="1.4" Depth="1.4" />
-            <MeshStandardMaterial Color="#15b8a6" />
-        </Mesh>
+        <Timeline Name="hoverTimeline" IsActive="@timelineEnabled" Loop="true" CurrentTimeMs="0">
+            <TimelineTrack ClassName="orbiter" Easing="easeInOutQuad">
+                <TimelineKeyframe TimeMs="0" PositionX="-0.6" RotationY="0" />
+                <TimelineKeyframe TimeMs="1000" PositionX="0.6" RotationY="1.2" />
+                <TimelineKeyframe TimeMs="2000" PositionX="-0.6" RotationY="2.4" />
+            </TimelineTrack>
+        </Timeline>
 
-        <Mesh PositionX="1.7" PositionY="0.1" PositionZ="0">
-            <SphereGeometry Radius="0.9" WidthSegments="48" HeightSegments="24" />
-            <MeshStandardMaterial Color="#ffffff"
-                                  TextureUrl="https://threejs.org/examples/textures/uv_grid_opengl.jpg"
-                                  Metalness="0.05"
-                                  Roughness="0.55" />
-        </Mesh>
+        <Group PositionX="0" PositionY="0" PositionZ="0" ClassName="@currentStageClass">
+            <Model SourceUrl="/models/Bulbasaur/Bulbasaur_ColladaMax.DAE"
+                   PositionX="-1.6"
+                   PositionY="-0.7"
+                   PositionZ="0"
+                   RotationY="1.2"
+                   ClassName="orbiter" />
+
+            <Mesh PositionX="1.7" PositionY="0.1" PositionZ="0">
+                <SphereGeometry Radius="0.9" WidthSegments="48" HeightSegments="24" />
+                <MeshStandardMaterial Color="#ffffff"
+                                      TextureUrl="https://threejs.org/examples/textures/uv_grid_opengl.jpg"
+                                      Metalness="0.05"
+                                      Roughness="0.55" />
+                <Outline Color="#ffb020" Opacity="0.9" />
+            </Mesh>
+        </Group>
 
         <Mesh PositionX="0"
               PositionY="-1.5"
@@ -38,6 +51,9 @@
         <h2>Controls</h2>
         <button class="btn btn-primary" @onclick="ToggleStageClass">
             Toggle Class (@currentStageClass)
+        </button>
+        <button class="btn btn-outline-light" @onclick="ToggleTimeline">
+            Timeline (@(timelineEnabled ? "On" : "Off"))
         </button>
     </aside>
 </div>
@@ -82,8 +98,15 @@
 @code {
     private string currentStageClass = "stage-idle";
 
+    private bool timelineEnabled = true;
+
     private void ToggleStageClass()
     {
         currentStageClass = currentStageClass == "stage-idle" ? "stage-active" : "stage-idle";
+    }
+
+    private void ToggleTimeline()
+    {
+        timelineEnabled = !timelineEnabled;
     }
 }
