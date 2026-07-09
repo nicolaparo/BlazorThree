@@ -1,0 +1,23 @@
+@code {
+    [CascadingParameter]
+    public MeshContext? MeshContext { get; set; }
+
+    [Parameter]
+    public double Radius { get; set; } = 0.5;
+
+    [Parameter]
+    public int WidthSegments { get; set; } = 32;
+
+    [Parameter]
+    public int HeightSegments { get; set; } = 16;
+
+    protected override void OnParametersSet()
+    {
+        MeshContext?.SetGeometry?.Invoke(new SphereGeometryDefinition
+        {
+            Radius = Radius,
+            WidthSegments = WidthSegments,
+            HeightSegments = HeightSegments
+        });
+    }
+}

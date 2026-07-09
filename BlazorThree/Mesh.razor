@@ -1,0 +1,109 @@
+@implements IDisposable
+
+<CascadingValue Value="meshContext">
+    @ChildContent
+</CascadingValue>
+
+@code {
+    private readonly string id = Guid.NewGuid().ToString("N");
+
+    private readonly MeshContext meshContext = new();
+
+    private GeometryDefinition geometry = new BoxGeometryDefinition();
+
+    private MaterialDefinition material = new MeshStandardMaterialDefinition();
+
+    private OutlineState? outline;
+
+    [CascadingParameter]
+    public SceneContext? SceneContext { get; set; }
+
+    [CascadingParameter]
+    public NodeContainerContext? NodeContainer { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public string? ClassName { get; set; }
+
+    [Parameter]
+    public double PositionX { get; set; }
+
+    [Parameter]
+    public double PositionY { get; set; }
+
+    [Parameter]
+    public double PositionZ { get; set; }
+
+    [Parameter]
+    public double RotationX { get; set; }
+
+    [Parameter]
+    public double RotationY { get; set; }
+
+    [Parameter]
+    public double RotationZ { get; set; }
+
+    [Parameter]
+    public double ScaleX { get; set; } = 1;
+
+    [Parameter]
+    public double ScaleY { get; set; } = 1;
+
+    [Parameter]
+    public double ScaleZ { get; set; } = 1;
+
+    protected override void OnInitialized()
+    {
+        meshContext.SetGeometry = value =>
+        {
+            geometry = value;
+            Publish();
+        };
+
+        meshContext.SetMaterial = value =>
+        {
+            material = value;
+            Publish();
+        };
+
+        meshContext.SetOutline = value =>
+        {
+            outline = value;
+            Publish();
+        };
+    }
+
+    protected override void OnParametersSet()
+    {
+        Publish();
+    }
+
+    private void Publish()
+    {
+        SceneContext?.UpsertMesh(new MeshState
+        {
+            Id = id,
+            ParentId = NodeContainer?.ParentId,
+            Geometry = geometry,
+            Material = material,
+            Outline = outline,
+            ClassName = ClassName,
+            PositionX = PositionX,
+            PositionY = PositionY,
+            PositionZ = PositionZ,
+            RotationX = RotationX,
+            RotationY = RotationY,
+            RotationZ = RotationZ,
+            ScaleX = ScaleX,
+            ScaleY = ScaleY,
+            ScaleZ = ScaleZ
+        });
+    }
+
+    public void Dispose()
+    {
+        SceneContext?.RemoveMesh(id);
+    }
+}

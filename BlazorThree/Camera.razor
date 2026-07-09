@@ -1,0 +1,27 @@
+@code {
+    [CascadingParameter]
+    public SceneContext? SceneContext { get; set; }
+
+    [Parameter]
+    public double Fov { get; set; } = 75;
+
+    [Parameter]
+    public double PositionX { get; set; } = 0;
+
+    [Parameter]
+    public double PositionY { get; set; } = 1;
+
+    [Parameter]
+    public double PositionZ { get; set; } = 5;
+
+    protected override void OnParametersSet()
+    {
+        SceneContext?.SetCamera(new CameraState
+        {
+            Fov = Fov,
+            PositionX = PositionX,
+            PositionY = PositionY,
+            PositionZ = PositionZ
+        });
+    }
+}

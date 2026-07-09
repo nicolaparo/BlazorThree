@@ -1,0 +1,61 @@
+@implements IDisposable
+
+@code {
+    private readonly string id = Guid.NewGuid().ToString("N");
+
+    [CascadingParameter]
+    public TimelineTrackContext? TimelineTrackContext { get; set; }
+
+    [Parameter]
+    public double TimeMs { get; set; }
+
+    [Parameter]
+    public double? PositionX { get; set; }
+
+    [Parameter]
+    public double? PositionY { get; set; }
+
+    [Parameter]
+    public double? PositionZ { get; set; }
+
+    [Parameter]
+    public double? RotationX { get; set; }
+
+    [Parameter]
+    public double? RotationY { get; set; }
+
+    [Parameter]
+    public double? RotationZ { get; set; }
+
+    [Parameter]
+    public double? ScaleX { get; set; }
+
+    [Parameter]
+    public double? ScaleY { get; set; }
+
+    [Parameter]
+    public double? ScaleZ { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        TimelineTrackContext?.UpsertKeyframe?.Invoke(new TimelineKeyframeState
+        {
+            Id = id,
+            TimeMs = TimeMs,
+            PositionX = PositionX,
+            PositionY = PositionY,
+            PositionZ = PositionZ,
+            RotationX = RotationX,
+            RotationY = RotationY,
+            RotationZ = RotationZ,
+            ScaleX = ScaleX,
+            ScaleY = ScaleY,
+            ScaleZ = ScaleZ
+        });
+    }
+
+    public void Dispose()
+    {
+        TimelineTrackContext?.RemoveKeyframe?.Invoke(id);
+    }
+}

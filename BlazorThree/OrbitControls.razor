@@ -1,0 +1,23 @@
+@code {
+    [CascadingParameter]
+    public SceneContext? SceneContext { get; set; }
+
+    [Parameter]
+    public bool Enabled { get; set; } = true;
+
+    [Parameter]
+    public bool EnableDamping { get; set; } = true;
+
+    [Parameter]
+    public double DampingFactor { get; set; } = 0.08;
+
+    protected override void OnParametersSet()
+    {
+        SceneContext?.SetOrbitControls(new OrbitControlsState
+        {
+            Enabled = Enabled,
+            EnableDamping = EnableDamping,
+            DampingFactor = DampingFactor
+        });
+    }
+}

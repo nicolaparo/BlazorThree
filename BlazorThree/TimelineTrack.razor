@@ -1,0 +1,68 @@
+@implements IDisposable
+
+<CascadingValue Value="timelineTrackContext">
+    @ChildContent
+</CascadingValue>
+
+@code {
+    private readonly string id = Guid.NewGuid().ToString("N");
+
+    private readonly Dictionary<string, TimelineKeyframeState> keyframes = new(StringComparer.Ordinal);
+
+    private readonly TimelineTrackContext timelineTrackContext = new();
+
+    [CascadingParameter]
+    public TimelineContext? TimelineContext { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public string ClassName { get; set; } = string.Empty;
+
+    [Parameter]
+    public string Easing { get; set; } = "linear";
+
+    protected override void OnInitialized()
+    {
+        timelineTrackContext.UpsertKeyframe = keyframe =>
+        {
+            keyframes[keyframe.Id] = keyframe;
+            Publish();
+        };
+
+        timelineTrackContext.RemoveKeyframe = keyframeId =>
+        {
+            if (keyframes.Remove(keyframeId))
+            {
+                Publish();
+            }
+        };
+    }
+
+    protected override void OnParametersSet()
+    {
+        Publish();
+    }
+
+    private void Publish()
+    {
+        if (string.IsNullOrWhiteSpace(ClassName))
+        {
+            return;
+        }
+
+        TimelineContext?.UpsertTrack?.Invoke(new TimelineTrackState
+        {
+            Id = id,
+            ClassName = ClassName,
+            Easing = Easing,
+            Keyframes = keyframes.Values.OrderBy(keyframe => keyframe.TimeMs).ToArray()
+        });
+    }
+
+    public void Dispose()
+    {
+        TimelineContext?.RemoveTrack?.Invoke(id);
+    }
+}

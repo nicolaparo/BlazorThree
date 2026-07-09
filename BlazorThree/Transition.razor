@@ -1,0 +1,82 @@
+@implements IDisposable
+
+@code {
+    private string? previousClassName;
+
+    [CascadingParameter]
+    public SceneContext? SceneContext { get; set; }
+
+    [Parameter]
+    public string ClassName { get; set; } = string.Empty;
+
+    [Parameter]
+    public int DurationMs { get; set; } = 650;
+
+    [Parameter]
+    public string Easing { get; set; } = "easeInOutQuad";
+
+    [Parameter]
+    public double? PositionX { get; set; }
+
+    [Parameter]
+    public double? PositionY { get; set; }
+
+    [Parameter]
+    public double? PositionZ { get; set; }
+
+    [Parameter]
+    public double? RotationX { get; set; }
+
+    [Parameter]
+    public double? RotationY { get; set; }
+
+    [Parameter]
+    public double? RotationZ { get; set; }
+
+    [Parameter]
+    public double? ScaleX { get; set; }
+
+    [Parameter]
+    public double? ScaleY { get; set; }
+
+    [Parameter]
+    public double? ScaleZ { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        if (!string.IsNullOrWhiteSpace(previousClassName) &&
+            !string.Equals(previousClassName, ClassName, StringComparison.Ordinal))
+        {
+            SceneContext?.RemoveTransition(previousClassName);
+        }
+
+        if (!string.IsNullOrWhiteSpace(ClassName))
+        {
+            SceneContext?.UpsertTransition(new TransitionState
+            {
+                ClassName = ClassName,
+                DurationMs = DurationMs,
+                Easing = Easing,
+                PositionX = PositionX,
+                PositionY = PositionY,
+                PositionZ = PositionZ,
+                RotationX = RotationX,
+                RotationY = RotationY,
+                RotationZ = RotationZ,
+                ScaleX = ScaleX,
+                ScaleY = ScaleY,
+                ScaleZ = ScaleZ
+            });
+        }
+
+        previousClassName = ClassName;
+    }
+
+    public void Dispose()
+    {
+        if (!string.IsNullOrWhiteSpace(previousClassName))
+        {
+            SceneContext?.RemoveTransition(previousClassName);
+        }
+    }
+}
