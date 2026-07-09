@@ -29,3 +29,8 @@ Thumbs.db
 
 # Logs
 *.log
+
+# exe, dll, and other binary files
+*.exe
+*.dll
+*.pdb

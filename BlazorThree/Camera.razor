@@ -14,6 +14,15 @@
     [Parameter]
     public double PositionZ { get; set; } = 5;
 
+    [Parameter]
+    public double RotationX { get; set; }
+
+    [Parameter]
+    public double RotationY { get; set; }
+
+    [Parameter]
+    public double RotationZ { get; set; }
+
     protected override void OnParametersSet()
     {
         SceneContext?.SetCamera(new CameraState
@@ -21,7 +30,10 @@
             Fov = Fov,
             PositionX = PositionX,
             PositionY = PositionY,
-            PositionZ = PositionZ
+            PositionZ = PositionZ,
+            RotationX = RotationX,
+            RotationY = RotationY,
+            RotationZ = RotationZ
         });
     }
 }

@@ -317,11 +317,15 @@ export function ensureCamera(state, cameraState) {
     const height = state.hostElement.clientHeight || 1;
     state.camera.fov = value(cameraState, "fov", "Fov", 75);
     state.camera.aspect = width / height;
-    state.camera.position.set(
-        value(cameraState, "positionX", "PositionX", 0),
-        value(cameraState, "positionY", "PositionY", 1),
-        value(cameraState, "positionZ", "PositionZ", 5)
-    );
+
+    if (!state.firstPersonControlsState?.enabled) {
+        state.camera.position.set(
+            value(cameraState, "positionX", "PositionX", 0),
+            value(cameraState, "positionY", "PositionY", 1),
+            value(cameraState, "positionZ", "PositionZ", 5)
+        );
+    }
+
     state.camera.updateProjectionMatrix();
     state.cameraSignature = cameraSignature;
 }

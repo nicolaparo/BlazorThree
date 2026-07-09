@@ -27,6 +27,10 @@
                    PositionY="-0.7"
                    PositionZ="0"
                    RotationY="1.2"
+                     IsAnimationPlaying="@bulbasaurAnimationPlaying"
+                     AnimationLoop="true"
+                     AnimationSpeed="1"
+                     BonePoses="@bulbasaurBonePoses"
                    ClassName="orbiter" />
 
             <Mesh PositionX="1.7" PositionY="0.1" PositionZ="0">
@@ -54,6 +58,12 @@
         </button>
         <button class="btn btn-outline-light" @onclick="ToggleTimeline">
             Timeline (@(timelineEnabled ? "On" : "Off"))
+        </button>
+        <button class="btn btn-outline-light" @onclick="ToggleBulbasaurPose">
+            Bulbasaur Pose (@(bulbasaurPoseApplied ? "On" : "Off"))
+        </button>
+        <button class="btn btn-outline-light" @onclick="ToggleBulbasaurAnimation">
+            Bulbasaur Clip Playback (@(bulbasaurAnimationPlaying ? "On" : "Off"))
         </button>
     </aside>
 </div>
@@ -96,9 +106,30 @@
 </style>
 
 @code {
+    private static readonly IReadOnlyList<BonePoseState> BulbasaurLookLeftPose =
+    [
+        new BonePoseState
+        {
+            BoneName = "Bone1",
+            RotationY = 0.35,
+            RotationZ = 0.05
+        },
+        new BonePoseState
+        {
+            BoneName = "Bone2",
+            RotationY = 0.2
+        }
+    ];
+
     private string currentStageClass = "stage-idle";
 
     private bool timelineEnabled = true;
+
+    private bool bulbasaurPoseApplied = true;
+
+    private bool bulbasaurAnimationPlaying = true;
+
+    private IReadOnlyList<BonePoseState> bulbasaurBonePoses = BulbasaurLookLeftPose;
 
     private void ToggleStageClass()
     {
@@ -108,5 +139,16 @@
     private void ToggleTimeline()
     {
         timelineEnabled = !timelineEnabled;
+    }
+
+    private void ToggleBulbasaurPose()
+    {
+        bulbasaurPoseApplied = !bulbasaurPoseApplied;
+        bulbasaurBonePoses = bulbasaurPoseApplied ? BulbasaurLookLeftPose : Array.Empty<BonePoseState>();
+    }
+
+    private void ToggleBulbasaurAnimation()
+    {
+        bulbasaurAnimationPlaying = !bulbasaurAnimationPlaying;
     }
 }

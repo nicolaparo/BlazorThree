@@ -1,0 +1,66 @@
+@implements IDisposable
+
+@code {
+    private SceneContext? subscribedContext;
+
+    [CascadingParameter]
+    public SceneContext? SceneContext { get; set; }
+
+    [Parameter]
+    public Func<SceneFrameInfo, Task>? Tick { get; set; }
+
+    [Parameter]
+    public EventCallback<SceneFrameInfo> OnTick { get; set; }
+
+    protected override void OnInitialized()
+    {
+        TryAttachContext();
+    }
+
+    protected override void OnParametersSet()
+    {
+        TryAttachContext();
+    }
+
+    private void HandleFrameTicked(SceneFrameInfo frameInfo)
+    {
+        if (Tick is not null)
+        {
+            _ = Tick(frameInfo);
+            return;
+        }
+
+        if (OnTick.HasDelegate)
+        {
+            _ = InvokeAsync(() => OnTick.InvokeAsync(frameInfo));
+        }
+    }
+
+    public void Dispose()
+    {
+        if (subscribedContext is not null)
+        {
+            subscribedContext.FrameTicked -= HandleFrameTicked;
+            subscribedContext = null;
+        }
+    }
+
+    private void TryAttachContext()
+    {
+        if (ReferenceEquals(subscribedContext, SceneContext))
+        {
+            return;
+        }
+
+        if (subscribedContext is not null)
+        {
+            subscribedContext.FrameTicked -= HandleFrameTicked;
+        }
+
+        subscribedContext = SceneContext;
+        if (subscribedContext is not null)
+        {
+            subscribedContext.FrameTicked += HandleFrameTicked;
+        }
+    }
+}

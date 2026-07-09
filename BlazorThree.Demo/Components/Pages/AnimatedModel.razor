@@ -1,0 +1,259 @@
+@page "/animated-model"
+@using BlazorThree.Engine
+@rendermode InteractiveServer
+
+<PageTitle>Animated Model Demo</PageTitle>
+
+<div class="scene-page">
+    <Scene Width="100%" Height="100%" ClearColor="#11161f">
+        <Camera Fov="55" PositionX="0" PositionY="1.6" PositionZ="6.2" />
+        <Light Type="LightDefinitions.Directional" Intensity="1.8" PositionX="6" PositionY="8" PositionZ="6" />
+        <Light Type="LightDefinitions.Ambient" Intensity="0.5" />
+        <OrbitControls Enabled="@(!isFirstPersonMode)" EnableDamping="true" DampingFactor="0.08" />
+        <FirstPersonControls Enabled="@isFirstPersonMode" MoveSpeed="5.0" LookSensitivity="0.0025" EyeHeight="1.6" LockPointerOnClick="true" />
+
+        <Mesh PositionX="0" PositionY="-0.03" PositionZ="0">
+            <CircleGeometry Radius="5" Segments="80" />
+            <MeshStandardMaterial Color="#2d3647" Metalness="0.05" Roughness="0.9" />
+        </Mesh>
+
+         <Model SourceUrl="@ModelUrl"
+               PositionX="0"
+             PositionY="-0.7"
+               PositionZ="0"
+             ScaleX="1"
+             ScaleY="1"
+             ScaleZ="1"
+               RotationY="@modelRotationY"
+               AnimationClipName="@selectedClipName"
+               IsAnimationPlaying="@isPlaying"
+               AnimationLoop="@isLooping"
+               AnimationSpeed="@playbackSpeed"
+               AnimationTimeMs="@(scrubEnabled ? scrubTimeMs : null)"
+               AnimationBlendMs="@blendMs"
+               AvailableClipsChanged="HandleAvailableClipsChanged">
+            @if (headPoseEnabled)
+            {
+                <BonePose BoneName="Bone1" RotationY="0.35" RotationZ="0.1" />
+                <BonePose BoneName="Bone2" RotationY="0.2" />
+            }
+        </Model>
+    </Scene>
+
+    <aside class="right-panel">
+        <h2>Animated GLB</h2>
+        <p class="description">Model: Bulbasaur_ColladaMax.DAE from local demo assets.</p>
+        <p class="description">Mode: @(isFirstPersonMode ? "First-person controls" : "Orbit controls")</p>
+
+        <button class="btn btn-warning" @onclick="ToggleControlMode">@(isFirstPersonMode ? "Switch to Orbit" : "Switch to First Person")</button>
+        @if (isFirstPersonMode)
+        {
+            <p class="description">Click the scene to lock the pointer, then use WASD and the mouse to move.</p>
+        }
+
+        <label class="label" for="clip-picker">Clip</label>
+        <select id="clip-picker" class="form-select" value="@selectedClipName" @onchange="HandleClipChanged">
+            @if (availableClips.Count == 0)
+            {
+                <option value="">(No clips detected)</option>
+            }
+            else
+            {
+                @foreach (var clip in availableClips)
+                {
+                    <option value="@clip">@clip</option>
+                }
+            }
+        </select>
+
+        <button class="btn btn-primary" @onclick="TogglePlayback">Playback (@(isPlaying ? "On" : "Paused"))</button>
+        <button class="btn btn-outline-light" @onclick="ToggleLoop">Loop (@(isLooping ? "On" : "Off"))</button>
+        <button class="btn btn-outline-light" @onclick="ToggleScrub">Scrub Mode (@(scrubEnabled ? "On" : "Off"))</button>
+        <button class="btn btn-outline-light" @onclick="ToggleHeadPose">Head Pose (@(headPoseEnabled ? "On" : "Off"))</button>
+
+        <label class="label" for="scrub-time">Scrub Time (ms): @scrubTimeMs.ToString("0")</label>
+        <input id="scrub-time"
+               type="range"
+               min="0"
+               max="8000"
+               step="16"
+               value="@scrubTimeMs"
+               @oninput="HandleScrubInput" />
+
+        <label class="label" for="speed">Playback Speed: @playbackSpeed.ToString("0.00")x</label>
+        <input id="speed"
+               type="range"
+               min="0.1"
+               max="2.0"
+               step="0.05"
+               value="@playbackSpeed"
+               @oninput="HandleSpeedInput" />
+
+        <label class="label" for="blend">Blend (ms): @blendMs</label>
+        <input id="blend"
+               type="range"
+               min="0"
+               max="1000"
+               step="20"
+               value="@blendMs"
+               @oninput="HandleBlendInput" />
+
+        <label class="label" for="yaw">Model Yaw: @modelRotationY.ToString("0.00") rad</label>
+        <input id="yaw"
+               type="range"
+               min="-3.14"
+               max="3.14"
+               step="0.01"
+               value="@modelRotationY"
+               @oninput="HandleYawInput" />
+    </aside>
+</div>
+
+<style>
+    .scene-page {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+    }
+
+    .right-panel {
+        position: absolute;
+        top: 0;
+        right: 0;
+        height: 100%;
+        width: min(360px, 38vw);
+        padding: 1rem;
+        background: rgba(9, 12, 18, 0.78);
+        backdrop-filter: blur(8px);
+        display: flex;
+        flex-direction: column;
+        gap: 0.6rem;
+        color: #ffffff;
+        z-index: 5;
+        overflow-y: auto;
+    }
+
+    .right-panel h2 {
+        margin: 0;
+        font-size: 1rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+    }
+
+    .description {
+        margin: 0;
+        color: #a8b5cc;
+        font-size: 0.9rem;
+    }
+
+    .label {
+        font-size: 0.82rem;
+        color: #dbe4f5;
+    }
+
+    @@media (max-width: 760px) {
+        .right-panel {
+            width: 240px;
+        }
+    }
+</style>
+
+@code {
+    private const string ModelUrl = "/models/Bulbasaur/Bulbasaur_ColladaMax.DAE";
+
+    private List<string> availableClips = [];
+
+    private string? selectedClipName;
+
+    private bool isPlaying = true;
+
+    private bool isLooping = true;
+
+    private bool scrubEnabled;
+
+    private bool headPoseEnabled;
+
+    private bool isFirstPersonMode = true;
+
+    private double scrubTimeMs;
+
+    private double playbackSpeed = 1;
+
+    private int blendMs = 200;
+
+    private double modelRotationY = 1.2;
+
+    private Task HandleAvailableClipsChanged(IReadOnlyList<string> clipNames)
+    {
+        availableClips = clipNames.ToList();
+        if (!string.IsNullOrWhiteSpace(selectedClipName) && availableClips.Contains(selectedClipName, StringComparer.Ordinal))
+        {
+            return Task.CompletedTask;
+        }
+
+        selectedClipName = availableClips.FirstOrDefault();
+        return Task.CompletedTask;
+    }
+
+    private void HandleClipChanged(ChangeEventArgs args)
+    {
+        selectedClipName = args.Value?.ToString();
+    }
+
+    private void HandleScrubInput(ChangeEventArgs args)
+    {
+        if (double.TryParse(args.Value?.ToString(), out var value))
+        {
+            scrubTimeMs = value;
+        }
+    }
+
+    private void HandleSpeedInput(ChangeEventArgs args)
+    {
+        if (double.TryParse(args.Value?.ToString(), out var value))
+        {
+            playbackSpeed = value;
+        }
+    }
+
+    private void HandleBlendInput(ChangeEventArgs args)
+    {
+        if (int.TryParse(args.Value?.ToString(), out var value))
+        {
+            blendMs = value;
+        }
+    }
+
+    private void HandleYawInput(ChangeEventArgs args)
+    {
+        if (double.TryParse(args.Value?.ToString(), out var value))
+        {
+            modelRotationY = value;
+        }
+    }
+
+    private void TogglePlayback()
+    {
+        isPlaying = !isPlaying;
+    }
+
+    private void ToggleLoop()
+    {
+        isLooping = !isLooping;
+    }
+
+    private void ToggleScrub()
+    {
+        scrubEnabled = !scrubEnabled;
+    }
+
+    private void ToggleHeadPose()
+    {
+        headPoseEnabled = !headPoseEnabled;
+    }
+
+    private void ToggleControlMode()
+    {
+        isFirstPersonMode = !isFirstPersonMode;
+    }
+}

@@ -1,13 +1,26 @@
 @implements IDisposable
 
+<CascadingValue Value="modelContext">
+    @ChildContent
+</CascadingValue>
+
 @code {
     private readonly string id = Guid.NewGuid().ToString("N");
+
+    private readonly ModelContext modelContext = new();
+
+    private readonly Dictionary<string, BonePoseState> childBonePoses = new(StringComparer.Ordinal);
+
+    private string availableClipsSignature = string.Empty;
 
     [CascadingParameter]
     public SceneContext? SceneContext { get; set; }
 
     [CascadingParameter]
     public NodeContainerContext? NodeContainer { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
 
     [Parameter]
     public string SourceUrl { get; set; } = string.Empty;
@@ -42,7 +55,68 @@
     [Parameter]
     public double ScaleZ { get; set; } = 1;
 
+    [Parameter]
+    public string? AnimationClipName { get; set; }
+
+    [Parameter]
+    public bool IsAnimationPlaying { get; set; } = true;
+
+    [Parameter]
+    public bool AnimationLoop { get; set; } = true;
+
+    [Parameter]
+    public double AnimationSpeed { get; set; } = 1;
+
+    [Parameter]
+    public double? AnimationTimeMs { get; set; }
+
+    [Parameter]
+    public int AnimationBlendMs { get; set; } = 180;
+
+    [Parameter]
+    public IReadOnlyList<BonePoseState> BonePoses { get; set; } = Array.Empty<BonePoseState>();
+
+    [Parameter]
+    public EventCallback<IReadOnlyList<string>> AvailableClipsChanged { get; set; }
+
+    protected override void OnInitialized()
+    {
+        modelContext.UpsertBonePose = (key, pose) =>
+        {
+            childBonePoses[key] = pose;
+            Publish();
+        };
+
+        modelContext.RemoveBonePose = key =>
+        {
+            if (childBonePoses.Remove(key))
+            {
+                Publish();
+            }
+        };
+
+        if (SceneContext is not null)
+        {
+            SceneContext.ModelClipsChanged += HandleModelClipsChanged;
+        }
+    }
+
     protected override void OnParametersSet()
+    {
+        Publish();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender
+            && SceneContext?.TryGetModelClipInfo(id, out var clipInfo) == true
+            && clipInfo is not null)
+        {
+            _ = DispatchClipListAsync(clipInfo.ClipNames);
+        }
+    }
+
+    private void Publish()
     {
         SceneContext?.UpsertModel(new ModelState
         {
@@ -58,12 +132,72 @@
             RotationZ = RotationZ,
             ScaleX = ScaleX,
             ScaleY = ScaleY,
-            ScaleZ = ScaleZ
+            ScaleZ = ScaleZ,
+            AnimationClipName = AnimationClipName,
+            IsAnimationPlaying = IsAnimationPlaying,
+            AnimationLoop = AnimationLoop,
+            AnimationSpeed = AnimationSpeed,
+            AnimationTimeMs = AnimationTimeMs,
+            AnimationBlendMs = AnimationBlendMs,
+            BonePoses = BuildEffectiveBonePoses()
         });
+    }
+
+    private IReadOnlyList<BonePoseState> BuildEffectiveBonePoses()
+    {
+        if (childBonePoses.Count == 0)
+        {
+            return BonePoses;
+        }
+
+        var mergedByBone = new Dictionary<string, BonePoseState>(StringComparer.Ordinal);
+        foreach (var pose in childBonePoses.Values)
+        {
+            mergedByBone[pose.BoneName] = pose;
+        }
+
+        foreach (var pose in BonePoses)
+        {
+            mergedByBone[pose.BoneName] = pose;
+        }
+
+        return mergedByBone.Values.ToArray();
+    }
+
+    private void HandleModelClipsChanged(ModelClipInfo clipInfo)
+    {
+        if (!string.Equals(clipInfo.ModelId, id, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _ = DispatchClipListAsync(clipInfo.ClipNames);
+    }
+
+    private Task DispatchClipListAsync(IReadOnlyList<string> clipNames)
+    {
+        if (!AvailableClipsChanged.HasDelegate)
+        {
+            return Task.CompletedTask;
+        }
+
+        var nextSignature = string.Join("|", clipNames);
+        if (string.Equals(availableClipsSignature, nextSignature, StringComparison.Ordinal))
+        {
+            return Task.CompletedTask;
+        }
+
+        availableClipsSignature = nextSignature;
+        return InvokeAsync(() => AvailableClipsChanged.InvokeAsync(clipNames));
     }
 
     public void Dispose()
     {
+        if (SceneContext is not null)
+        {
+            SceneContext.ModelClipsChanged -= HandleModelClipsChanged;
+        }
+
         SceneContext?.RemoveModel(id);
     }
 }

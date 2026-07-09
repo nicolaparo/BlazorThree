@@ -8,6 +8,10 @@ public sealed class SceneState
 
     public OrbitControlsState OrbitControls { get; set; } = new();
 
+    public FirstPersonControlsState FirstPersonControls { get; set; } = new();
+
+    public SceneInputOptionsState InputOptions { get; set; } = new();
+
     public IReadOnlyList<GroupState> Groups { get; set; } = Array.Empty<GroupState>();
 
     public IReadOnlyList<TransitionState> Transitions { get; set; } = Array.Empty<TransitionState>();
@@ -28,6 +32,12 @@ public sealed class CameraState
     public double PositionY { get; set; } = 1;
 
     public double PositionZ { get; set; } = 5;
+
+    public double RotationX { get; set; }
+
+    public double RotationY { get; set; }
+
+    public double RotationZ { get; set; }
 }
 
 public sealed class LightState
@@ -105,6 +115,43 @@ public sealed class ModelState
     public double ScaleY { get; set; } = 1;
 
     public double ScaleZ { get; set; } = 1;
+
+    public string? AnimationClipName { get; set; }
+
+    public bool IsAnimationPlaying { get; set; } = true;
+
+    public bool AnimationLoop { get; set; } = true;
+
+    public double AnimationSpeed { get; set; } = 1;
+
+    public double? AnimationTimeMs { get; set; }
+
+    public int AnimationBlendMs { get; set; } = 180;
+
+    public IReadOnlyList<BonePoseState> BonePoses { get; set; } = Array.Empty<BonePoseState>();
+}
+
+public sealed class BonePoseState
+{
+    public required string BoneName { get; set; }
+
+    public double? PositionX { get; set; }
+
+    public double? PositionY { get; set; }
+
+    public double? PositionZ { get; set; }
+
+    public double? RotationX { get; set; }
+
+    public double? RotationY { get; set; }
+
+    public double? RotationZ { get; set; }
+
+    public double? ScaleX { get; set; }
+
+    public double? ScaleY { get; set; }
+
+    public double? ScaleZ { get; set; }
 }
 
 public sealed class GroupState
@@ -148,6 +195,76 @@ public sealed class OrbitControlsState
     public bool EnableDamping { get; set; } = true;
 
     public double DampingFactor { get; set; } = 0.08;
+}
+
+public sealed class FirstPersonControlsState
+{
+    public bool Enabled { get; set; }
+
+    public double MoveSpeed { get; set; } = 4.5;
+
+    public double LookSensitivity { get; set; } = 0.0025;
+
+    public double EyeHeight { get; set; } = 1.6;
+
+    public bool LockPointerOnClick { get; set; } = true;
+}
+
+public sealed class SceneInputOptionsState
+{
+    public bool Enabled { get; set; }
+
+    public bool CaptureKeyboard { get; set; } = true;
+
+    public bool CaptureMouse { get; set; } = true;
+
+    public bool RequestPointerLockOnClick { get; set; } = true;
+}
+
+public sealed class SceneFrameInfo
+{
+    public double TimestampMs { get; set; }
+
+    public double DeltaSeconds { get; set; }
+}
+
+public sealed class SceneKeyboardEventInfo
+{
+    public string Code { get; set; } = string.Empty;
+
+    public bool Repeat { get; set; }
+
+    public bool AltKey { get; set; }
+
+    public bool CtrlKey { get; set; }
+
+    public bool ShiftKey { get; set; }
+
+    public bool MetaKey { get; set; }
+}
+
+public sealed class SceneMouseEventInfo
+{
+    public double MovementX { get; set; }
+
+    public double MovementY { get; set; }
+
+    public int Button { get; set; }
+
+    public int Buttons { get; set; }
+
+    public bool AltKey { get; set; }
+
+    public bool CtrlKey { get; set; }
+
+    public bool ShiftKey { get; set; }
+
+    public bool MetaKey { get; set; }
+}
+
+public sealed class ScenePointerLockInfo
+{
+    public bool IsLocked { get; set; }
 }
 
 public sealed class TransitionState
