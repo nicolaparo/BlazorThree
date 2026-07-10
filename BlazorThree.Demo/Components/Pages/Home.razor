@@ -58,15 +58,6 @@
         <button class="btn btn-primary" @onclick="ToggleStageClass">
             Toggle Class (@currentStageClass)
         </button>
-        <button class="btn btn-outline-light" @onclick="ToggleTimeline">
-            Timeline (@(timelineEnabled ? "On" : "Off"))
-        </button>
-        <button class="btn btn-outline-light" @onclick="ToggleBulbasaurPose">
-            Bulbasaur Pose (@(bulbasaurPoseApplied ? "On" : "Off"))
-        </button>
-        <button class="btn btn-outline-light" @onclick="ToggleBulbasaurAnimation">
-            Bulbasaur Clip Playback (@(bulbasaurAnimationPlaying ? "On" : "Off"))
-        </button>
     </aside>
 </div>
 
@@ -108,30 +99,9 @@
 </style>
 
 @code {
-    private static readonly IReadOnlyList<BonePoseState> BulbasaurLookLeftPose =
-    [
-        new BonePoseState
-        {
-            BoneName = "Bone1",
-            Rotation = new Vector3(0f, 0.35f, 0.05f)
-        },
-        new BonePoseState
-        {
-            BoneName = "Bone2",
-            Rotation = new Vector3(0f, 0.2f, 0f)
-        }
-    ];
-
+   
     private string currentStageClass = "stage-idle";
-
-    private bool timelineEnabled = true;
-
-    private bool bulbasaurPoseApplied = true;
-
-    private bool bulbasaurAnimationPlaying = true;
-
-    private IReadOnlyList<BonePoseState> bulbasaurBonePoses = BulbasaurLookLeftPose;
-
+    
     private string? hoveredElementId;
 
     private string? selectedElementId;
@@ -139,22 +109,6 @@
     private void ToggleStageClass()
     {
         currentStageClass = currentStageClass == "stage-idle" ? "stage-active" : "stage-idle";
-    }
-
-    private void ToggleTimeline()
-    {
-        timelineEnabled = !timelineEnabled;
-    }
-
-    private void ToggleBulbasaurPose()
-    {
-        bulbasaurPoseApplied = !bulbasaurPoseApplied;
-        bulbasaurBonePoses = bulbasaurPoseApplied ? BulbasaurLookLeftPose : Array.Empty<BonePoseState>();
-    }
-
-    private void ToggleBulbasaurAnimation()
-    {
-        bulbasaurAnimationPlaying = !bulbasaurAnimationPlaying;
     }
 
     private void OnElementMouseEnter(SceneElementMouseEventArgs args)

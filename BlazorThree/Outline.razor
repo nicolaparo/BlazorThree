@@ -1,3 +1,5 @@
+@implements IDisposable
+
 @code {
     [CascadingParameter]
     public MeshContext? MeshContext { get; set; }
@@ -15,5 +17,10 @@
             Color = Color,
             Opacity = Opacity
         });
+    }
+
+    public void Dispose()
+    {
+        MeshContext?.SetOutline?.Invoke(null);
     }
 }
