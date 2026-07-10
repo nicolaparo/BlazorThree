@@ -1,23 +1,16 @@
 @implements IDisposable
+@inherits Object3d
 
 <CascadingValue Value="modelContext">
     @ChildContent
 </CascadingValue>
 
 @code {
-    private readonly string id = Guid.NewGuid().ToString("N");
-
     private readonly ModelContext modelContext = new();
 
     private readonly Dictionary<string, BonePoseState> childBonePoses = new(StringComparer.Ordinal);
 
     private string availableClipsSignature = string.Empty;
-
-    [CascadingParameter]
-    public SceneContext? SceneContext { get; set; }
-
-    [CascadingParameter]
-    public NodeContainerContext? NodeContainer { get; set; }
 
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
@@ -27,33 +20,6 @@
 
     [Parameter]
     public string? ClassName { get; set; }
-
-    [Parameter]
-    public double PositionX { get; set; }
-
-    [Parameter]
-    public double PositionY { get; set; }
-
-    [Parameter]
-    public double PositionZ { get; set; }
-
-    [Parameter]
-    public double RotationX { get; set; }
-
-    [Parameter]
-    public double RotationY { get; set; }
-
-    [Parameter]
-    public double RotationZ { get; set; }
-
-    [Parameter]
-    public double ScaleX { get; set; } = 1;
-
-    [Parameter]
-    public double ScaleY { get; set; } = 1;
-
-    [Parameter]
-    public double ScaleZ { get; set; } = 1;
 
     [Parameter]
     public string? AnimationClipName { get; set; }
@@ -109,7 +75,7 @@
     protected override void OnAfterRender(bool firstRender)
     {
         if (firstRender
-            && SceneContext?.TryGetModelClipInfo(id, out var clipInfo) == true
+            && SceneContext?.TryGetModelClipInfo(CurrentId, out var clipInfo) == true
             && clipInfo is not null)
         {
             _ = DispatchClipListAsync(clipInfo.ClipNames);
@@ -118,21 +84,25 @@
 
     private void Publish()
     {
+        RemovePreviousIfIdChanged(previousId => SceneContext?.RemoveModel(previousId));
+
+        var modelId = CurrentId;
+
+        SceneContext?.SetModelMouseHandlers(
+            modelId,
+            ClickHandler,
+            MouseEnterHandler,
+            MouseLeaveHandler);
+
         SceneContext?.UpsertModel(new ModelState
         {
-            Id = id,
+            Id = modelId,
             ParentId = NodeContainer?.ParentId,
             SourceUrl = SourceUrl,
             ClassName = ClassName,
-            PositionX = PositionX,
-            PositionY = PositionY,
-            PositionZ = PositionZ,
-            RotationX = RotationX,
-            RotationY = RotationY,
-            RotationZ = RotationZ,
-            ScaleX = ScaleX,
-            ScaleY = ScaleY,
-            ScaleZ = ScaleZ,
+            Position = Position,
+            Rotation = Rotation,
+            Scale = Scale,
             AnimationClipName = AnimationClipName,
             IsAnimationPlaying = IsAnimationPlaying,
             AnimationLoop = AnimationLoop,
@@ -141,6 +111,8 @@
             AnimationBlendMs = AnimationBlendMs,
             BonePoses = BuildEffectiveBonePoses()
         });
+
+        MarkPublished();
     }
 
     private IReadOnlyList<BonePoseState> BuildEffectiveBonePoses()
@@ -166,7 +138,7 @@
 
     private void HandleModelClipsChanged(ModelClipInfo clipInfo)
     {
-        if (!string.Equals(clipInfo.ModelId, id, StringComparison.Ordinal))
+        if (!string.Equals(clipInfo.ModelId, CurrentId, StringComparison.Ordinal))
         {
             return;
         }
@@ -198,6 +170,6 @@
             SceneContext.ModelClipsChanged -= HandleModelClipsChanged;
         }
 
-        SceneContext?.RemoveModel(id);
+        SceneContext?.RemoveModel(GetDisposeId());
     }
 }

@@ -1,7 +1,13 @@
 @implements IAsyncDisposable
 @inject IJSRuntime JS
 
-<div @ref="hostElement" style="width:@Width; height:@Height; position:relative; border-radius:12px; overflow:hidden;"></div>
+<div
+    @ref="hostElement"
+    @onclick="Click"
+    @onmouseenter="MouseEnter"
+    @onmouseleave="MouseLeave"
+    style="width:@Width; height:@Height; position:relative; border-radius:12px; overflow:hidden;">
+</div>
 
 <CascadingValue Value="sceneContext">
     <CascadingValue Value="rootNodeContainer">

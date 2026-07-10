@@ -1,3 +1,5 @@
+@implements IPositionable
+
 @code {
     [CascadingParameter]
     public SceneContext? SceneContext { get; set; }
@@ -12,13 +14,7 @@
     public double Intensity { get; set; } = 1;
 
     [Parameter]
-    public double PositionX { get; set; } = 4;
-
-    [Parameter]
-    public double PositionY { get; set; } = 6;
-
-    [Parameter]
-    public double PositionZ { get; set; } = 8;
+    public Vector3 Position { get; set; } = new(4f, 6f, 8f);
 
     protected override void OnParametersSet()
     {
@@ -27,9 +23,7 @@
             Type = Type,
             Color = Color,
             Intensity = Intensity,
-            PositionX = PositionX,
-            PositionY = PositionY,
-            PositionZ = PositionZ
+            Position = Position
         });
     }
 }

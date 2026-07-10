@@ -2,109 +2,245 @@ import * as THREE from "https://esm.sh/three@0.178.0";
 import { OrbitControls } from "https://esm.sh/three@0.178.0/examples/jsm/controls/OrbitControls";
 import { buildCamera, ensureCamera, ensureLight } from "./blazorthree/assets.js";
 import { clearSceneNodes, disposeGroupRecord, disposeMeshRecord, disposeModelRecord, syncGroups, syncMeshes, syncModels, updateModelPlayback } from "./blazorthree/nodes.js";
-import { now, value } from "./blazorthree/shared.js";
-import { applyLiveTimeline, buildTimelineMap, buildTransitionMap, updateRecordAnimation } from "./blazorthree/timeline.js";
+import { applyTransition, mergeTransform, now, value } from "./blazorthree/shared.js";
+import { applyLiveTimeline, applyRecordTarget, buildTimelineMap, buildTransitionMap, updateRecordAnimation } from "./blazorthree/timeline.js";
 
 const scenes = new Map();
 
-function isTypingTarget(event) {
-    const target = event?.target;
-    if (!target || !target.tagName) {
+function readPickMeta(object3D) {
+    let current = object3D;
+
+    while (current) {
+        const meta = current.userData?.blazorThreePick;
+        if (meta?.id && meta?.type) {
+            return meta;
+        }
+
+        current = current.parent;
+    }
+
+    return null;
+}
+
+function getPickTargets(state) {
+    const targets = [];
+
+    for (const record of state.meshes.values()) {
+        targets.push(record.mesh);
+    }
+
+    for (const record of state.models.values()) {
+        targets.push(record.container);
+    }
+
+    return targets;
+}
+
+function pickElement(state, event) {
+    if (!state.camera) {
+        return null;
+    }
+
+    const rect = state.renderer.domElement.getBoundingClientRect();
+    const width = rect.width || 1;
+    const height = rect.height || 1;
+
+    state.pointer.x = ((event.clientX - rect.left) / width) * 2 - 1;
+    state.pointer.y = -((event.clientY - rect.top) / height) * 2 + 1;
+
+    state.raycaster.setFromCamera(state.pointer, state.camera);
+
+    const targets = getPickTargets(state);
+    if (!targets.length) {
+        return null;
+    }
+
+    const intersections = state.raycaster.intersectObjects(targets, true);
+    for (const hit of intersections) {
+        const meta = readPickMeta(hit.object);
+        if (meta) {
+            return meta;
+        }
+    }
+
+    return null;
+}
+
+function emitDotNetMouseEvent(state, methodName, meta) {
+    if (!meta || !state.dotNetRef?.invokeMethodAsync) {
+        return;
+    }
+
+    state.dotNetRef.invokeMethodAsync(methodName, meta.id, meta.type).catch(() => {
+        // Ignore callback errors during teardown and reconnects.
+    });
+}
+
+function buildElementKey(meta) {
+    if (!meta?.type || !meta?.id) {
+        return null;
+    }
+
+    return `${meta.type}:${meta.id}`;
+}
+
+function canEmitForEvent(state, eventName, meta) {
+    const key = buildElementKey(meta);
+    if (!key) {
         return false;
     }
 
-    const tagName = target.tagName.toUpperCase();
-    return tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT" || target.isContentEditable;
+    return state.interactionTargets[eventName].has(key);
 }
 
-function clamp(valueToClamp, min, max) {
-    return Math.min(max, Math.max(min, valueToClamp));
+function canHoverElement(state, meta) {
+    return canEmitForEvent(state, "mouseEnter", meta) || canEmitForEvent(state, "mouseLeave", meta);
 }
 
-function emitFrame(state, timestamp, deltaSeconds) {
-    if (state.dotNetRef) {
-        state.dotNetRef.invokeMethodAsync("OnFrame", timestamp, deltaSeconds);
-    }
-}
-
-function emitKeyEvent(state, methodName, event) {
-    if (!state.dotNetRef) {
+function clearHover(state, notifyLeave = true) {
+    if (!state.hoveredElement) {
         return;
     }
 
-    state.dotNetRef.invokeMethodAsync(
-        methodName,
-        event.code,
-        event.repeat,
-        event.altKey,
-        event.ctrlKey,
-        event.shiftKey,
-        event.metaKey
-    );
+    if (notifyLeave && state.interactionSubscriptions.mouseLeave && canEmitForEvent(state, "mouseLeave", state.hoveredElement)) {
+        emitDotNetMouseEvent(state, "OnSceneElementMouseLeave", state.hoveredElement);
+    }
+
+    state.hoveredElement = null;
 }
 
-function emitMouseEvent(state, methodName, event) {
-    if (!state.dotNetRef) {
+function handlePointerMove(state, event) {
+    if (!state.interactionSubscriptions.mouseEnter && !state.interactionSubscriptions.mouseLeave) {
         return;
     }
 
-    state.dotNetRef.invokeMethodAsync(
-        methodName,
-        event.movementX ?? 0,
-        event.movementY ?? 0,
-        event.button ?? 0,
-        event.buttons ?? 0,
-        event.altKey,
-        event.ctrlKey,
-        event.shiftKey,
-        event.metaKey
-    );
-}
+    const pickedMeta = pickElement(state, event);
+    const picked = canHoverElement(state, pickedMeta) ? pickedMeta : null;
+    const current = state.hoveredElement;
 
-function emitPointerLockChanged(state) {
-    if (state.dotNetRef) {
-        state.dotNetRef.invokeMethodAsync("OnPointerLockChanged", document.pointerLockElement === state.renderer.domElement);
-    }
-}
-
-function updateFirstPersonCamera(state, deltaSeconds) {
-    if (!state.firstPersonControlsState.enabled) {
+    if (current?.id === picked?.id && current?.type === picked?.type) {
         return;
     }
 
-    const moveSpeed = value(state.firstPersonControlsState, "moveSpeed", "MoveSpeed", 4.5);
-    const eyeHeight = value(state.firstPersonControlsState, "eyeHeight", "EyeHeight", 1.6);
-
-    if (!state.firstPersonInitialized) {
-        state.firstPersonYaw = state.camera.rotation.y;
-        state.firstPersonPitch = state.camera.rotation.x;
-        state.firstPersonInitialized = true;
+    if (current) {
+        if (state.interactionSubscriptions.mouseLeave && canEmitForEvent(state, "mouseLeave", current)) {
+            emitDotNetMouseEvent(state, "OnSceneElementMouseLeave", current);
+        }
     }
 
-    const moveX = (state.firstPersonMovement.right ? 1 : 0) - (state.firstPersonMovement.left ? 1 : 0);
-    const moveZ = (state.firstPersonMovement.forward ? 1 : 0) - (state.firstPersonMovement.backward ? 1 : 0);
+    state.hoveredElement = picked;
 
-    if (moveX !== 0 || moveZ !== 0) {
-        const forward = new THREE.Vector3(Math.sin(state.firstPersonYaw), 0, Math.cos(state.firstPersonYaw));
-        const right = new THREE.Vector3(forward.z, 0, -forward.x);
-        const movement = new THREE.Vector3();
+    if (picked && state.interactionSubscriptions.mouseEnter && canEmitForEvent(state, "mouseEnter", picked)) {
+        emitDotNetMouseEvent(state, "OnSceneElementMouseEnter", picked);
+    }
+}
 
-        movement.addScaledVector(forward, moveZ);
-        movement.addScaledVector(right, moveX);
-        movement.normalize().multiplyScalar(moveSpeed * deltaSeconds);
-
-        state.camera.position.add(movement);
+function handlePointerClick(state, event) {
+    if (!state.interactionSubscriptions.click) {
+        return;
     }
 
-    state.firstPersonPitch = clamp(state.firstPersonPitch, -1.45, 1.45);
-    state.camera.position.y = eyeHeight;
-    state.camera.rotation.order = "YXZ";
-    state.camera.rotation.set(state.firstPersonPitch, state.firstPersonYaw, 0);
-    state.camera.updateProjectionMatrix();
+    const picked = pickElement(state, event);
+    if (!picked || !canEmitForEvent(state, "click", picked)) {
+        return;
+    }
+
+    emitDotNetMouseEvent(state, "OnSceneElementClick", picked);
+}
+
+function configureInteractionListeners(state, subscriptions) {
+    const nextSubscriptions = {
+        click: Boolean(subscriptions?.click),
+        mouseEnter: Boolean(subscriptions?.mouseEnter),
+        mouseLeave: Boolean(subscriptions?.mouseLeave)
+    };
+
+    const canvas = state.renderer.domElement;
+    const needsClick = nextSubscriptions.click;
+    const needsHover = nextSubscriptions.mouseEnter || nextSubscriptions.mouseLeave;
+
+    if (needsClick && !state.pointerClickAttached) {
+        canvas.addEventListener("click", state.handlePointerClick);
+        state.pointerClickAttached = true;
+    } else if (!needsClick && state.pointerClickAttached) {
+        canvas.removeEventListener("click", state.handlePointerClick);
+        state.pointerClickAttached = false;
+    }
+
+    if (needsHover && !state.pointerHoverAttached) {
+        canvas.addEventListener("mousemove", state.handlePointerMove);
+        canvas.addEventListener("mouseleave", state.handlePointerLeave);
+        state.pointerHoverAttached = true;
+    } else if (!needsHover && state.pointerHoverAttached) {
+        canvas.removeEventListener("mousemove", state.handlePointerMove);
+        canvas.removeEventListener("mouseleave", state.handlePointerLeave);
+        state.pointerHoverAttached = false;
+        clearHover(state, false);
+    }
+
+    state.interactionSubscriptions = nextSubscriptions;
+}
+
+function configureInteractionTargets(state, targets) {
+    const nextTargets = {
+        click: new Set(Array.isArray(targets?.click) ? targets.click : []),
+        mouseEnter: new Set(Array.isArray(targets?.mouseEnter) ? targets.mouseEnter : []),
+        mouseLeave: new Set(Array.isArray(targets?.mouseLeave) ? targets.mouseLeave : [])
+    };
+
+    state.interactionTargets = nextTargets;
+
+    if (state.hoveredElement && !canHoverElement(state, state.hoveredElement)) {
+        clearHover(state, false);
+    }
 }
 
 function render(state) {
     state.renderer.render(state.scene, state.camera);
+}
+
+function refreshTransitionTargets(state, timelineMap) {
+    for (const record of state.groups.values()) {
+        const className = record.className;
+        const transitionState = className ? state.transitionMap.get(className) : null;
+        record.transitionState = transitionState;
+
+        if (!record.baseTransform) {
+            continue;
+        }
+
+        const timelineTransform = className ? timelineMap.get(className) : null;
+        const targetTransform = mergeTransform(applyTransition(record.baseTransform, transitionState), timelineTransform);
+        applyRecordTarget(record, targetTransform, transitionState, timelineTransform);
+    }
+
+    for (const record of state.meshes.values()) {
+        const className = record.className;
+        const transitionState = className ? state.transitionMap.get(className) : null;
+        record.transitionState = transitionState;
+
+        if (!record.baseTransform) {
+            continue;
+        }
+
+        const timelineTransform = className ? timelineMap.get(className) : null;
+        const targetTransform = mergeTransform(applyTransition(record.baseTransform, transitionState), timelineTransform);
+        applyRecordTarget(record, targetTransform, transitionState, timelineTransform);
+    }
+
+    for (const record of state.models.values()) {
+        const className = record.className;
+        const transitionState = className ? state.transitionMap.get(className) : null;
+        record.transitionState = transitionState;
+
+        if (!record.baseTransform) {
+            continue;
+        }
+
+        const timelineTransform = className ? timelineMap.get(className) : null;
+        const targetTransform = mergeTransform(applyTransition(record.baseTransform, transitionState), timelineTransform);
+        applyRecordTarget(record, targetTransform, transitionState, timelineTransform);
+    }
 }
 
 export function initScene(hostElement, options, dotNetRef) {
@@ -124,16 +260,15 @@ export function initScene(hostElement, options, dotNetRef) {
         hostElement,
         scene,
         renderer,
+        raycaster: new THREE.Raycaster(),
+        pointer: new THREE.Vector2(),
+        hoveredElement: null,
+        interactionSubscriptions: { click: false, mouseEnter: false, mouseLeave: false },
+        interactionTargets: { click: new Set(), mouseEnter: new Set(), mouseLeave: new Set() },
         camera: buildCamera(null, hostElement),
         light: null,
         orbitControls: null,
         orbitControlsState: { enabled: false, enableDamping: true, dampingFactor: 0.08 },
-        firstPersonControlsState: { enabled: false, moveSpeed: 4.5, lookSensitivity: 0.0025, eyeHeight: 1.6, lockPointerOnClick: true },
-        firstPersonMovement: { forward: false, backward: false, left: false, right: false },
-        firstPersonYaw: 0,
-        firstPersonPitch: 0,
-        firstPersonInitialized: false,
-        inputOptions: { enabled: false, captureKeyboard: true, captureMouse: true, requestPointerLockOnClick: true },
         textureLoader: new THREE.TextureLoader(),
         textureCache: new Map(),
         groups: new Map(),
@@ -147,148 +282,22 @@ export function initScene(hostElement, options, dotNetRef) {
         lightKind: null,
         frameHandle: 0,
         resizeObserver: null,
-        dotNetRef
+        dotNetRef,
+        handlePointerMove: null,
+        handlePointerLeave: null,
+        handlePointerClick: null,
+        pointerHoverAttached: false,
+        pointerClickAttached: false
     };
 
-    state.handleKeyDown = (event) => {
-        const captureKeyboard = state.inputOptions.enabled && state.inputOptions.captureKeyboard;
-        if ((!captureKeyboard && !state.firstPersonControlsState.enabled) || isTypingTarget(event)) {
-            return;
-        }
-
-        if (captureKeyboard) {
-            emitKeyEvent(state, "OnKeyDown", event);
-        }
-
-        switch (event.code) {
-            case "KeyW":
-                state.firstPersonMovement.forward = true;
-                event.preventDefault();
-                break;
-            case "KeyS":
-                state.firstPersonMovement.backward = true;
-                event.preventDefault();
-                break;
-            case "KeyA":
-                state.firstPersonMovement.left = true;
-                event.preventDefault();
-                break;
-            case "KeyD":
-                state.firstPersonMovement.right = true;
-                event.preventDefault();
-                break;
-        }
-    };
-
-    state.handleKeyUp = (event) => {
-        if (state.inputOptions.enabled && state.inputOptions.captureKeyboard) {
-            emitKeyEvent(state, "OnKeyUp", event);
-        }
-
-        switch (event.code) {
-            case "KeyW":
-                state.firstPersonMovement.forward = false;
-                event.preventDefault();
-                break;
-            case "KeyS":
-                state.firstPersonMovement.backward = false;
-                event.preventDefault();
-                break;
-            case "KeyA":
-                state.firstPersonMovement.left = false;
-                event.preventDefault();
-                break;
-            case "KeyD":
-                state.firstPersonMovement.right = false;
-                event.preventDefault();
-                break;
-        }
-    };
-
-    state.handleMouseMove = (event) => {
-        const captureMouse = state.inputOptions.enabled && state.inputOptions.captureMouse;
-        const pointerLocked = document.pointerLockElement === state.renderer.domElement;
-        const emitWithoutPointerLock = !state.inputOptions.requestPointerLockOnClick;
-
-        if (!captureMouse && (!state.firstPersonControlsState.enabled || !pointerLocked)) {
-            return;
-        }
-
-        if (captureMouse && (pointerLocked || emitWithoutPointerLock)) {
-            emitMouseEvent(state, "OnMouseMove", event);
-        }
-
-        const sensitivity = value(state.firstPersonControlsState, "lookSensitivity", "LookSensitivity", 0.0025);
-        state.firstPersonYaw -= event.movementX * sensitivity;
-        state.firstPersonPitch -= event.movementY * sensitivity;
-        state.firstPersonPitch = clamp(state.firstPersonPitch, -1.45, 1.45);
-    };
-
-    state.handleMouseDown = (event) => {
-        const captureMouse = state.inputOptions.enabled && state.inputOptions.captureMouse;
-        if (!captureMouse) {
-            return;
-        }
-
-        emitMouseEvent(state, "OnMouseDown", event);
-        event.preventDefault();
-    };
-
-    state.handleMouseUp = (event) => {
-        const captureMouse = state.inputOptions.enabled && state.inputOptions.captureMouse;
-        if (!captureMouse) {
-            return;
-        }
-
-        emitMouseEvent(state, "OnMouseUp", event);
-    };
-
-    state.handleCanvasClick = () => {
-        const requestPointerLockOnClick = state.inputOptions.enabled && state.inputOptions.requestPointerLockOnClick;
-        if (!state.firstPersonControlsState.enabled && !requestPointerLockOnClick) {
-            return;
-        }
-
-        const lockPointerOnClick = requestPointerLockOnClick || value(state.firstPersonControlsState, "lockPointerOnClick", "LockPointerOnClick", true);
-        if (lockPointerOnClick && document.pointerLockElement !== state.renderer.domElement) {
-            state.renderer.domElement.requestPointerLock();
-        }
-    };
-
-    state.handlePointerLockChange = () => {
-        emitPointerLockChanged(state);
-
-        if (document.pointerLockElement !== state.renderer.domElement) {
-            state.firstPersonMovement.forward = false;
-            state.firstPersonMovement.backward = false;
-            state.firstPersonMovement.left = false;
-            state.firstPersonMovement.right = false;
-        }
-    };
-
-    state.handleContextMenu = (event) => {
-        event.preventDefault();
-    };
-
-    window.addEventListener("keydown", state.handleKeyDown);
-    window.addEventListener("keyup", state.handleKeyUp);
-    window.addEventListener("mousemove", state.handleMouseMove);
-    window.addEventListener("mousedown", state.handleMouseDown);
-    window.addEventListener("mouseup", state.handleMouseUp);
-    document.addEventListener("pointerlockchange", state.handlePointerLockChange);
-    state.renderer.domElement.addEventListener("click", state.handleCanvasClick);
-    state.renderer.domElement.addEventListener("contextmenu", state.handleContextMenu);
+    state.handlePointerMove = event => handlePointerMove(state, event);
+    state.handlePointerLeave = () => clearHover(state);
+    state.handlePointerClick = event => handlePointerClick(state, event);
 
     const animate = () => {
         state.frameHandle = requestAnimationFrame(animate);
 
         const timestamp = now();
-        const deltaSeconds = state.lastTimestamp === undefined ? 0 : Math.min((timestamp - state.lastTimestamp) / 1000, 0.05);
-        state.lastTimestamp = timestamp;
-
-        emitFrame(state, timestamp, deltaSeconds);
-
-        updateFirstPersonCamera(state, deltaSeconds);
 
         const timelineMap = buildTimelineMap(state.timelines, state.timelinePlayback, timestamp);
         applyLiveTimeline(state, timelineMap);
@@ -338,64 +347,66 @@ export function syncScene(sceneId, graph) {
         return;
     }
 
-    const transitionMap = buildTransitionMap(graph);
-    const timelines = value(graph, "timelines", "Timelines", []);
-    state.transitionMap = transitionMap;
-    state.timelines = timelines;
+    const isFull = value(graph, "isFull", "IsFull", false);
+
+    const transitionsChanged = isFull || value(graph, "transitionsChanged", "TransitionsChanged", false);
+    if (transitionsChanged) {
+        const transitions = value(graph, "transitions", "Transitions", []);
+        state.transitionMap = buildTransitionMap({ transitions });
+    }
+
+    const timelinesChanged = isFull || value(graph, "timelinesChanged", "TimelinesChanged", false);
+    if (timelinesChanged) {
+        state.timelines = value(graph, "timelines", "Timelines", []);
+    }
 
     const timelineMap = buildTimelineMap(state.timelines, state.timelinePlayback, now());
 
-    const cameraState = value(graph, "camera", "Camera", {});
-    ensureCamera(state, cameraState);
+    const interactionChanged = isFull || value(graph, "interactionChanged", "InteractionChanged", false);
+    if (interactionChanged) {
+        const interactionSubscriptions = value(graph, "interactionSubscriptions", "InteractionSubscriptions", {});
+        const interactionTargets = value(graph, "interactionTargets", "InteractionTargets", {});
+
+        configureInteractionTargets(state, {
+            click: value(interactionTargets, "click", "Click", []),
+            mouseEnter: value(interactionTargets, "mouseEnter", "MouseEnter", []),
+            mouseLeave: value(interactionTargets, "mouseLeave", "MouseLeave", [])
+        });
+
+        configureInteractionListeners(state, {
+            click: value(interactionSubscriptions, "click", "Click", false),
+            mouseEnter: value(interactionSubscriptions, "mouseEnter", "MouseEnter", false),
+            mouseLeave: value(interactionSubscriptions, "mouseLeave", "MouseLeave", false)
+        });
+    }
+
+    const cameraChanged = isFull || value(graph, "cameraChanged", "CameraChanged", false);
+    if (cameraChanged) {
+        const cameraState = value(graph, "camera", "Camera", {});
+        ensureCamera(state, cameraState);
+    }
 
     if (state.orbitControls) {
         state.orbitControls.object = state.camera;
     }
 
-    const firstPersonControlsState = value(graph, "firstPersonControls", "FirstPersonControls", {});
-    state.firstPersonControlsState = {
-        enabled: value(firstPersonControlsState, "enabled", "Enabled", false),
-        moveSpeed: value(firstPersonControlsState, "moveSpeed", "MoveSpeed", 4.5),
-        lookSensitivity: value(firstPersonControlsState, "lookSensitivity", "LookSensitivity", 0.0025),
-        eyeHeight: value(firstPersonControlsState, "eyeHeight", "EyeHeight", 1.6),
-        lockPointerOnClick: value(firstPersonControlsState, "lockPointerOnClick", "LockPointerOnClick", true)
-    };
-
-    const inputOptionsState = value(graph, "inputOptions", "InputOptions", {});
-    state.inputOptions = {
-        enabled: value(inputOptionsState, "enabled", "Enabled", false),
-        captureKeyboard: value(inputOptionsState, "captureKeyboard", "CaptureKeyboard", true),
-        captureMouse: value(inputOptionsState, "captureMouse", "CaptureMouse", true),
-        requestPointerLockOnClick: value(inputOptionsState, "requestPointerLockOnClick", "RequestPointerLockOnClick", true)
-    };
-
-    if (!state.firstPersonControlsState.enabled) {
-        state.firstPersonInitialized = false;
-        state.firstPersonMovement.forward = false;
-        state.firstPersonMovement.backward = false;
-        state.firstPersonMovement.left = false;
-        state.firstPersonMovement.right = false;
+    const lightChanged = isFull || value(graph, "lightChanged", "LightChanged", false);
+    if (lightChanged) {
+        const lightState = value(graph, "light", "Light", {});
+        ensureLight(state, lightState);
     }
 
-    const lightState = value(graph, "light", "Light", {});
-    ensureLight(state, lightState);
+    const orbitControlsChanged = isFull || value(graph, "orbitControlsChanged", "OrbitControlsChanged", false);
+    if (orbitControlsChanged) {
+        const orbitControlsState = value(graph, "orbitControls", "OrbitControls", {});
+        state.orbitControlsState = {
+            enabled: value(orbitControlsState, "enabled", "Enabled", false),
+            enableDamping: value(orbitControlsState, "enableDamping", "EnableDamping", true),
+            dampingFactor: value(orbitControlsState, "dampingFactor", "DampingFactor", 0.08)
+        };
+    }
 
-    const orbitControlsState = value(graph, "orbitControls", "OrbitControls", {});
-    state.orbitControlsState = {
-        enabled: value(orbitControlsState, "enabled", "Enabled", false),
-        enableDamping: value(orbitControlsState, "enableDamping", "EnableDamping", true),
-        dampingFactor: value(orbitControlsState, "dampingFactor", "DampingFactor", 0.08)
-    };
-
-    if (state.firstPersonControlsState.enabled) {
-        if (state.orbitControls) {
-            state.orbitControls.enabled = false;
-        }
-
-        state.camera.rotation.order = "YXZ";
-        state.camera.position.y = value(state.firstPersonControlsState, "eyeHeight", "EyeHeight", 1.6);
-        state.camera.updateProjectionMatrix();
-    } else if (state.orbitControlsState.enabled) {
+    if (state.orbitControlsState.enabled) {
         if (!state.orbitControls) {
             state.orbitControls = new OrbitControls(state.camera, state.renderer.domElement);
         }
@@ -408,33 +419,84 @@ export function syncScene(sceneId, graph) {
         state.orbitControls.enabled = false;
     }
 
-    const groupStates = value(graph, "groups", "Groups", []);
-    const meshStates = value(graph, "meshes", "Meshes", []);
-    const modelStates = value(graph, "models", "Models", []);
+    const groupStates = value(graph, "upsertGroups", "UpsertGroups", []);
+    const meshStates = value(graph, "upsertMeshes", "UpsertMeshes", []);
+    const modelStates = value(graph, "upsertModels", "UpsertModels", []);
 
-    const liveGroupIds = syncGroups(state, groupStates, transitionMap, timelineMap);
-    const liveMeshIds = syncMeshes(state, meshStates, transitionMap, timelineMap);
-    const liveModelIds = syncModels(state, modelStates, transitionMap, timelineMap);
+    if (isFull) {
+        const liveGroupIds = syncGroups(state, groupStates, state.transitionMap, timelineMap);
+        const liveMeshIds = syncMeshes(state, meshStates, state.transitionMap, timelineMap);
+        const liveModelIds = syncModels(state, modelStates, state.transitionMap, timelineMap);
 
-    for (const [id, record] of state.meshes.entries()) {
-        if (!liveMeshIds.has(id)) {
-            disposeMeshRecord(record);
-            state.meshes.delete(id);
+        for (const [id, record] of state.meshes.entries()) {
+            if (!liveMeshIds.has(id)) {
+                disposeMeshRecord(record);
+                state.meshes.delete(id);
+            }
         }
-    }
 
-    for (const [id, record] of state.groups.entries()) {
-        if (!liveGroupIds.has(id)) {
+        for (const [id, record] of state.groups.entries()) {
+            if (!liveGroupIds.has(id)) {
+                disposeGroupRecord(record);
+                state.groups.delete(id);
+            }
+        }
+
+        for (const [id, record] of state.models.entries()) {
+            if (!liveModelIds.has(id)) {
+                disposeModelRecord(record);
+                state.models.delete(id);
+            }
+        }
+    } else {
+        if (groupStates.length) {
+            syncGroups(state, groupStates, state.transitionMap, timelineMap);
+        }
+
+        const removeGroupIds = value(graph, "removeGroupIds", "RemoveGroupIds", []);
+        for (const id of removeGroupIds) {
+            const record = state.groups.get(id);
+            if (!record) {
+                continue;
+            }
+
             disposeGroupRecord(record);
             state.groups.delete(id);
         }
-    }
 
-    for (const [id, record] of state.models.entries()) {
-        if (!liveModelIds.has(id)) {
+        if (meshStates.length) {
+            syncMeshes(state, meshStates, state.transitionMap, timelineMap);
+        }
+
+        const removeMeshIds = value(graph, "removeMeshIds", "RemoveMeshIds", []);
+        for (const id of removeMeshIds) {
+            const record = state.meshes.get(id);
+            if (!record) {
+                continue;
+            }
+
+            disposeMeshRecord(record);
+            state.meshes.delete(id);
+        }
+
+        if (modelStates.length) {
+            syncModels(state, modelStates, state.transitionMap, timelineMap);
+        }
+
+        const removeModelIds = value(graph, "removeModelIds", "RemoveModelIds", []);
+        for (const id of removeModelIds) {
+            const record = state.models.get(id);
+            if (!record) {
+                continue;
+            }
+
             disposeModelRecord(record);
             state.models.delete(id);
         }
+    }
+
+    if (transitionsChanged) {
+        refreshTransitionTargets(state, timelineMap);
     }
 
     render(state);
@@ -448,15 +510,20 @@ export function disposeScene(sceneId) {
 
     cancelAnimationFrame(state.frameHandle);
     state.resizeObserver?.disconnect();
+    clearHover(state);
 
-    window.removeEventListener("keydown", state.handleKeyDown);
-    window.removeEventListener("keyup", state.handleKeyUp);
-    window.removeEventListener("mousemove", state.handleMouseMove);
-    window.removeEventListener("mousedown", state.handleMouseDown);
-    window.removeEventListener("mouseup", state.handleMouseUp);
-    document.removeEventListener("pointerlockchange", state.handlePointerLockChange);
-    state.renderer.domElement.removeEventListener("click", state.handleCanvasClick);
-    state.renderer.domElement.removeEventListener("contextmenu", state.handleContextMenu);
+    const canvas = state.renderer.domElement;
+    if (state.pointerHoverAttached && state.handlePointerMove) {
+        canvas.removeEventListener("mousemove", state.handlePointerMove);
+    }
+
+    if (state.pointerHoverAttached && state.handlePointerLeave) {
+        canvas.removeEventListener("mouseleave", state.handlePointerLeave);
+    }
+
+    if (state.pointerClickAttached && state.handlePointerClick) {
+        canvas.removeEventListener("click", state.handlePointerClick);
+    }
 
     clearSceneNodes(state);
 

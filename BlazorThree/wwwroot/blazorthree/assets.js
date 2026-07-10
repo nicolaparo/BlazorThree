@@ -1,5 +1,5 @@
 import * as THREE from "https://esm.sh/three@0.178.0";
-import { signature, value } from "./shared.js";
+import { readVector3, signature, value } from "./shared.js";
 
 function readVector2Array(rawPoints, fallback) {
     const points = Array.isArray(rawPoints) ? rawPoints : fallback;
@@ -228,11 +228,8 @@ export function buildCamera(cameraState, hostElement) {
     const fov = value(cameraState, "fov", "Fov", 75);
     const camera = new THREE.PerspectiveCamera(fov, width / height, 0.1, 1000);
 
-    camera.position.set(
-        value(cameraState, "positionX", "PositionX", 0),
-        value(cameraState, "positionY", "PositionY", 1),
-        value(cameraState, "positionZ", "PositionZ", 5)
-    );
+    const position = readVector3(cameraState, "position", "Position", { x: 0, y: 1, z: 5 });
+    camera.position.set(position.x, position.y, position.z);
 
     return camera;
 }
@@ -242,6 +239,7 @@ export function buildLight(lightState) {
     const type = value(typeState, "kind", "Kind", "directional");
     const color = value(lightState, "color", "Color", "#ffffff");
     const intensity = value(lightState, "intensity", "Intensity", 1);
+    const position = readVector3(lightState, "position", "Position", { x: 4, y: 6, z: 8 });
 
     let light;
     if (type === "point") {
@@ -253,11 +251,7 @@ export function buildLight(lightState) {
     }
 
     if (light.position) {
-        light.position.set(
-            value(lightState, "positionX", "PositionX", 4),
-            value(lightState, "positionY", "PositionY", 6),
-            value(lightState, "positionZ", "PositionZ", 8)
-        );
+        light.position.set(position.x, position.y, position.z);
     }
 
     return light;
@@ -287,21 +281,128 @@ export function buildMaterial(state, meshState) {
     const materialState = value(meshState, "material", "Material", {});
     const kind = value(materialState, "kind", "Kind", "meshStandard");
 
-    if (kind !== "meshStandard") {
-        return new THREE.MeshStandardMaterial({ color: "#00a2ff" });
-    }
+    let material;
 
-    const material = new THREE.MeshStandardMaterial({
-        color: value(materialState, "color", "Color", "#00a2ff"),
-        metalness: value(materialState, "metalness", "Metalness", 0.1),
-        roughness: value(materialState, "roughness", "Roughness", 0.6)
-    });
+    switch (kind) {
+        case "meshBasic": {
+            material = new THREE.MeshBasicMaterial({
+                color: value(materialState, "color", "Color", "#00a2ff"),
+                wireframe: value(materialState, "wireframe", "Wireframe", false)
+            });
 
-    const textureUrl = value(materialState, "textureUrl", "TextureUrl", null);
-    const texture = resolveTexture(state, textureUrl);
-    if (texture) {
-        material.map = texture;
-        material.needsUpdate = true;
+            const map = resolveTexture(state, value(materialState, "textureUrl", "TextureUrl", null));
+            if (map) {
+                material.map = map;
+                material.needsUpdate = true;
+            }
+
+            break;
+        }
+        case "meshLambert": {
+            material = new THREE.MeshLambertMaterial({
+                color: value(materialState, "color", "Color", "#00a2ff"),
+                emissive: value(materialState, "emissive", "Emissive", "#000000")
+            });
+
+            const map = resolveTexture(state, value(materialState, "textureUrl", "TextureUrl", null));
+            if (map) {
+                material.map = map;
+                material.needsUpdate = true;
+            }
+
+            break;
+        }
+        case "meshMatcap": {
+            material = new THREE.MeshMatcapMaterial({
+                color: value(materialState, "color", "Color", "#ffffff")
+            });
+
+            const matcap = resolveTexture(state, value(materialState, "matcapUrl", "MatcapUrl", null));
+            if (matcap) {
+                material.matcap = matcap;
+                material.needsUpdate = true;
+            }
+
+            break;
+        }
+        case "meshNormal": {
+            material = new THREE.MeshNormalMaterial({
+                wireframe: value(materialState, "wireframe", "Wireframe", false),
+                flatShading: value(materialState, "flatShading", "FlatShading", false)
+            });
+            break;
+        }
+        case "meshPhong": {
+            material = new THREE.MeshPhongMaterial({
+                color: value(materialState, "color", "Color", "#00a2ff"),
+                emissive: value(materialState, "emissive", "Emissive", "#000000"),
+                specular: value(materialState, "specular", "Specular", "#111111"),
+                shininess: value(materialState, "shininess", "Shininess", 30)
+            });
+
+            const map = resolveTexture(state, value(materialState, "textureUrl", "TextureUrl", null));
+            if (map) {
+                material.map = map;
+                material.needsUpdate = true;
+            }
+
+            break;
+        }
+        case "meshPhysical": {
+            material = new THREE.MeshPhysicalMaterial({
+                color: value(materialState, "color", "Color", "#00a2ff"),
+                metalness: value(materialState, "metalness", "Metalness", 0.1),
+                roughness: value(materialState, "roughness", "Roughness", 0.6),
+                clearcoat: value(materialState, "clearcoat", "Clearcoat", 0),
+                clearcoatRoughness: value(materialState, "clearcoatRoughness", "ClearcoatRoughness", 0),
+                transmission: value(materialState, "transmission", "Transmission", 0),
+                ior: value(materialState, "ior", "Ior", 1.5),
+                reflectivity: value(materialState, "reflectivity", "Reflectivity", 0.5)
+            });
+
+            const map = resolveTexture(state, value(materialState, "textureUrl", "TextureUrl", null));
+            if (map) {
+                material.map = map;
+                material.needsUpdate = true;
+            }
+
+            break;
+        }
+        case "meshToon": {
+            material = new THREE.MeshToonMaterial({
+                color: value(materialState, "color", "Color", "#00a2ff")
+            });
+
+            const map = resolveTexture(state, value(materialState, "textureUrl", "TextureUrl", null));
+            if (map) {
+                material.map = map;
+                material.needsUpdate = true;
+            }
+
+            const gradientMap = resolveTexture(state, value(materialState, "gradientMapUrl", "GradientMapUrl", null));
+            if (gradientMap) {
+                material.gradientMap = gradientMap;
+                material.needsUpdate = true;
+            }
+
+            break;
+        }
+        case "meshStandard":
+        default: {
+            material = new THREE.MeshStandardMaterial({
+                color: value(materialState, "color", "Color", "#00a2ff"),
+                metalness: value(materialState, "metalness", "Metalness", 0.1),
+                roughness: value(materialState, "roughness", "Roughness", 0.6)
+            });
+
+            const map = resolveTexture(state, value(materialState, "textureUrl", "TextureUrl", null));
+            if (map) {
+                material.map = map;
+                material.needsUpdate = true;
+            }
+
+            break;
+        }
     }
 
     return material;
@@ -315,16 +416,10 @@ export function ensureCamera(state, cameraState) {
 
     const width = state.hostElement.clientWidth || 1;
     const height = state.hostElement.clientHeight || 1;
+    const position = readVector3(cameraState, "position", "Position", { x: 0, y: 1, z: 5 });
     state.camera.fov = value(cameraState, "fov", "Fov", 75);
     state.camera.aspect = width / height;
-
-    if (!state.firstPersonControlsState?.enabled) {
-        state.camera.position.set(
-            value(cameraState, "positionX", "PositionX", 0),
-            value(cameraState, "positionY", "PositionY", 1),
-            value(cameraState, "positionZ", "PositionZ", 5)
-        );
-    }
+    state.camera.position.set(position.x, position.y, position.z);
 
     state.camera.updateProjectionMatrix();
     state.cameraSignature = cameraSignature;
@@ -360,11 +455,8 @@ export function ensureLight(state, lightState) {
     }
 
     if (state.light.position) {
-        state.light.position.set(
-            value(lightState, "positionX", "PositionX", 4),
-            value(lightState, "positionY", "PositionY", 6),
-            value(lightState, "positionZ", "PositionZ", 8)
-        );
+        const position = readVector3(lightState, "position", "Position", { x: 4, y: 6, z: 8 });
+        state.light.position.set(position.x, position.y, position.z);
     }
 
     state.lightSignature = lightSignature;

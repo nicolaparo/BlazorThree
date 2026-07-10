@@ -26,18 +26,18 @@ https://www.threejs.pro/docs/#manual/en/introduction/Creating-a-scene
 Use components directly in a page:
 
 <Scene Width="100%" Height="520px" ClearColor="#101925">
-    <Camera Fov="65" PositionX="0" PositionY="1.4" PositionZ="7" />
-   <Light Type="LightDefinitions.Directional" Intensity="1.6" PositionX="6" PositionY="8" PositionZ="3" />
+    <Camera Fov="65" Position="new Vector3(0f, 1.4f, 7f)" />
+   <Light Type="LightDefinitions.Directional" Intensity="1.6" Position="new Vector3(6f, 8f, 3f)" />
    <OrbitControls Enabled="true" EnableDamping="true" DampingFactor="0.09" />
-   <Transition ClassName="stage-idle" DurationMs="550" PositionY="0" RotationY="0" ScaleX="1" ScaleY="1" ScaleZ="1" />
-   <Transition ClassName="stage-active" DurationMs="1200" Easing="easeOutCubic" PositionY="0.9" RotationY="1.8" ScaleX="1.2" ScaleY="1.2" ScaleZ="1.2" />
+   <Transition ClassName="stage-idle" DurationMs="550" Position="Vector3.Zero" Rotation="Vector3.Zero" Scale="Vector3.One" />
+   <Transition ClassName="stage-active" DurationMs="1200" Easing="easeOutCubic" Position="new Vector3(0f, 0.9f, 0f)" Rotation="new Vector3(0f, 1.8f, 0f)" Scale="new Vector3(1.2f, 1.2f, 1.2f)" />
 
-   <Mesh PositionX="-1.6" ClassName="stage-active">
+   <Mesh Position="new Vector3(-1.6f, 0f, 0f)" ClassName="stage-active">
       <BoxGeometry Width="1.4" Height="1.4" Depth="1.4" />
       <MeshStandardMaterial Color="#15b8a6" />
    </Mesh>
 
-   <Mesh PositionX="1.7" PositionY="0.1">
+   <Mesh Position="new Vector3(1.7f, 0.1f, 0f)">
       <SphereGeometry Radius="0.9" WidthSegments="48" HeightSegments="24" />
       <MeshStandardMaterial TextureUrl="https://threejs.org/examples/textures/uv_grid_opengl.jpg" />
    </Mesh>
@@ -50,13 +50,13 @@ Change a mesh ClassName at runtime and BlazorThree will animate to the matching 
 `Group` can contain `Mesh` or nested `Group` components and applies transforms to the whole subtree.
 
 ```razor
-<Group PositionX="0" PositionY="1" RotationY="0.5">
-   <Mesh PositionX="-1">
+<Group Position="new Vector3(0f, 1f, 0f)" Rotation="new Vector3(0f, 0.5f, 0f)">
+   <Mesh Position="new Vector3(-1f, 0f, 0f)">
       <BoxGeometry Width="1" Height="1" Depth="1" />
       <MeshStandardMaterial Color="#15b8a6" />
    </Mesh>
 
-   <Group PositionX="2">
+   <Group Position="new Vector3(2f, 0f, 0f)">
       <Mesh>
          <SphereGeometry Radius="0.5" />
          <MeshStandardMaterial Color="#ffb020" />
@@ -72,9 +72,9 @@ Change a mesh ClassName at runtime and BlazorThree will animate to the matching 
 ```razor
 <Timeline Name="hover" IsActive="true" Loop="true" CurrentTimeMs="@timeMs">
    <TimelineTrack ClassName="orbiter" Easing="easeInOutQuad">
-      <TimelineKeyframe TimeMs="0" PositionX="-0.6" RotationY="0" />
-      <TimelineKeyframe TimeMs="1000" PositionX="0.6" RotationY="1.2" />
-      <TimelineKeyframe TimeMs="2000" PositionX="-0.6" RotationY="2.4" />
+      <TimelineKeyframe TimeMs="0" Position="new Vector3(-0.6f, 0f, 0f)" Rotation="Vector3.Zero" />
+      <TimelineKeyframe TimeMs="1000" Position="new Vector3(0.6f, 0f, 0f)" Rotation="new Vector3(0f, 1.2f, 0f)" />
+      <TimelineKeyframe TimeMs="2000" Position="new Vector3(-0.6f, 0f, 0f)" Rotation="new Vector3(0f, 2.4f, 0f)" />
    </TimelineTrack>
 </Timeline>
 ```

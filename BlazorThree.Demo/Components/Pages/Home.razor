@@ -5,47 +5,49 @@
 <PageTitle>BlazorThree Demo</PageTitle>
 
 <div class="scene-page">
-    <Scene Width="100%" Height="100%" ClearColor="#101925">
-        <Camera Fov="65" PositionX="0" PositionY="1.4" PositionZ="7" />
-        <Light Type="LightDefinitions.Directional" Intensity="1.6" PositionX="6" PositionY="8" PositionZ="3" />
+    <Scene Width="100%"
+           Height="100%"
+           ClearColor="#101925">
+        <Camera Fov="65" Position="@(new Vector3(0f, 1.4f, 7f))" />
+        <Light Type="LightDefinitions.Directional" Intensity="1.6" Position="@(new Vector3(6f, 8f, 3f))" />
         <OrbitControls Enabled="true" EnableDamping="true" DampingFactor="0.09" />
 
-        <Transition ClassName="stage-idle" DurationMs="550" Easing="easeInOutQuad" PositionY="0" RotationY="0" ScaleX="1" ScaleY="1" ScaleZ="1" />
-        <Transition ClassName="stage-active" DurationMs="1200" Easing="easeOutCubic" PositionY="0.9" RotationY="1.8" ScaleX="1.2" ScaleY="1.2" ScaleZ="1.2" />
+        <Transition ClassName="stage-idle" DurationMs="550" Easing="easeInOutQuad" Position="@Vector3.Zero" Rotation="@Vector3.Zero" Scale="@Vector3.One" />
+        <Transition ClassName="stage-active" DurationMs="1200" Easing="easeOutCubic" Position="@(new Vector3(0f, 0.9f, 0f))" Rotation="@(new Vector3(0f, 1.8f, 0f))" Scale="@(new Vector3(1.2f, 1.2f, 1.2f))" />
 
-        <Timeline Name="hoverTimeline" IsActive="@timelineEnabled" Loop="true" CurrentTimeMs="0">
-            <TimelineTrack ClassName="orbiter" Easing="easeInOutQuad">
-                <TimelineKeyframe TimeMs="0" PositionX="-0.6" RotationY="0" />
-                <TimelineKeyframe TimeMs="1000" PositionX="0.6" RotationY="1.2" />
-                <TimelineKeyframe TimeMs="2000" PositionX="-0.6" RotationY="2.4" />
-            </TimelineTrack>
-        </Timeline>
+        <Group Position="@Vector3.Zero" ClassName="@currentStageClass">
 
-        <Group PositionX="0" PositionY="0" PositionZ="0" ClassName="@currentStageClass">
-            <Model SourceUrl="/models/Bulbasaur/Bulbasaur_ColladaMax.DAE"
-                   PositionX="-1.6"
-                   PositionY="-0.7"
-                   PositionZ="0"
-                   RotationY="1.2"
-                     IsAnimationPlaying="@bulbasaurAnimationPlaying"
-                     AnimationLoop="true"
-                     AnimationSpeed="1"
-                     BonePoses="@bulbasaurBonePoses"
-                   ClassName="orbiter" />
+            <Mesh id="cube"
+                Position="@(new Vector3(-1.7f, 0.1f, 0f))"
+                Click="OnElementClick"
+                MouseEnter="OnElementMouseEnter"
+                MouseLeave="OnElementMouseLeave">
+                <BoxGeometry Width="1" Height="1" Depth="1"/>
+                <MeshStandardMaterial Color="#f5f500" Metalness="0.05" Roughness="0.55"/>
+                @if (TryGetOutlineColor("cube") is string cubeOutlineColor)
+                {
+                    <Outline Color="@cubeOutlineColor" Opacity="0.98"/>
+                }
+            </Mesh>
 
-            <Mesh PositionX="1.7" PositionY="0.1" PositionZ="0">
-                <SphereGeometry Radius="0.9" WidthSegments="48" HeightSegments="24" />
+            <Mesh id="sphere"
+                Position="@(new Vector3(1.7f, 0.1f, 0f))"
+                Click="OnElementClick"
+                MouseEnter="OnElementMouseEnter"
+                MouseLeave="OnElementMouseLeave">
+                <SphereGeometry Radius="0.9" WidthSegments="48" HeightSegments="24"/>
                 <MeshStandardMaterial Color="#ffffff"
                                       TextureUrl="https://threejs.org/examples/textures/uv_grid_opengl.jpg"
                                       Metalness="0.05"
-                                      Roughness="0.55" />
-                <Outline Color="#ffb020" Opacity="0.9" />
+                                      Roughness="0.55"/>
+                @if (TryGetOutlineColor("sphere") is string sphereOutlineColor)
+                {
+                    <Outline Color="@sphereOutlineColor" Opacity="0.98"/>
+                }
             </Mesh>
         </Group>
 
-        <Mesh PositionX="0"
-              PositionY="-1.5"
-              PositionZ="0">
+        <Mesh Position="@(new Vector3(0f, -1.5f, 0f))">
             <BoxGeometry Width="6" Height="0.18" Depth="3" />
             <MeshStandardMaterial Color="#6ca0ff" Metalness="0.15" Roughness="0.9" />
         </Mesh>
@@ -91,12 +93,12 @@
         z-index: 5;
     }
 
-    .right-panel h2 {
-        margin: 0;
-        font-size: 1rem;
-        text-transform: uppercase;
-        letter-spacing: 0.08em;
-    }
+        .right-panel h2 {
+            margin: 0;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
 
     @@media (max-width: 720px) {
         .right-panel {
@@ -111,13 +113,12 @@
         new BonePoseState
         {
             BoneName = "Bone1",
-            RotationY = 0.35,
-            RotationZ = 0.05
+            Rotation = new Vector3(0f, 0.35f, 0.05f)
         },
         new BonePoseState
         {
             BoneName = "Bone2",
-            RotationY = 0.2
+            Rotation = new Vector3(0f, 0.2f, 0f)
         }
     ];
 
@@ -130,6 +131,10 @@
     private bool bulbasaurAnimationPlaying = true;
 
     private IReadOnlyList<BonePoseState> bulbasaurBonePoses = BulbasaurLookLeftPose;
+
+    private string? hoveredElementId;
+
+    private string? selectedElementId;
 
     private void ToggleStageClass()
     {
@@ -150,5 +155,35 @@
     private void ToggleBulbasaurAnimation()
     {
         bulbasaurAnimationPlaying = !bulbasaurAnimationPlaying;
+    }
+
+    private void OnElementMouseEnter(SceneElementMouseEventArgs args)
+    {
+        hoveredElementId = args.ElementId;
+    }
+
+    private void OnElementMouseLeave(SceneElementMouseEventArgs args)
+    {
+        hoveredElementId = null;
+    }
+
+    private void OnElementClick(SceneElementMouseEventArgs args)
+    {
+        selectedElementId = args.ElementId;
+    }
+
+    private string? TryGetOutlineColor(string elementId)
+    {
+        if (string.Equals(selectedElementId, elementId, StringComparison.Ordinal))
+        {
+            return "#2f80ff";
+        }
+
+        if (string.Equals(hoveredElementId, elementId, StringComparison.Ordinal))
+        {
+            return "#ffd84d";
+        }
+
+        return null;
     }
 }

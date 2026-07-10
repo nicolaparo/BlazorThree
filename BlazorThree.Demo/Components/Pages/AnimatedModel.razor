@@ -6,25 +6,20 @@
 
 <div class="scene-page">
     <Scene Width="100%" Height="100%" ClearColor="#11161f">
-        <Camera Fov="55" PositionX="0" PositionY="1.6" PositionZ="6.2" />
-        <Light Type="LightDefinitions.Directional" Intensity="1.8" PositionX="6" PositionY="8" PositionZ="6" />
+        <Camera Fov="55" Position="@(new Vector3(0f, 1.6f, 6.2f))" />
+        <Light Type="LightDefinitions.Directional" Intensity="1.8" Position="@(new Vector3(6f, 8f, 6f))" />
         <Light Type="LightDefinitions.Ambient" Intensity="0.5" />
-        <OrbitControls Enabled="@(!isFirstPersonMode)" EnableDamping="true" DampingFactor="0.08" />
-        <FirstPersonControls Enabled="@isFirstPersonMode" MoveSpeed="5.0" LookSensitivity="0.0025" EyeHeight="1.6" LockPointerOnClick="true" />
+        <OrbitControls Enabled="true" EnableDamping="true" DampingFactor="0.08" />
 
-        <Mesh PositionX="0" PositionY="-0.03" PositionZ="0">
+        <Mesh Position="@(new Vector3(0f, -0.03f, 0f))">
             <CircleGeometry Radius="5" Segments="80" />
             <MeshStandardMaterial Color="#2d3647" Metalness="0.05" Roughness="0.9" />
         </Mesh>
 
          <Model SourceUrl="@ModelUrl"
-               PositionX="0"
-             PositionY="-0.7"
-               PositionZ="0"
-             ScaleX="1"
-             ScaleY="1"
-             ScaleZ="1"
-               RotationY="@modelRotationY"
+                             Position="@(new Vector3(0f, -0.7f, 0f))"
+                             Scale="@Vector3.One"
+                             Rotation="@(new Vector3(0f, (float)modelRotationY, 0f))"
                AnimationClipName="@selectedClipName"
                IsAnimationPlaying="@isPlaying"
                AnimationLoop="@isLooping"
@@ -34,8 +29,8 @@
                AvailableClipsChanged="HandleAvailableClipsChanged">
             @if (headPoseEnabled)
             {
-                <BonePose BoneName="Bone1" RotationY="0.35" RotationZ="0.1" />
-                <BonePose BoneName="Bone2" RotationY="0.2" />
+                <BonePose BoneName="Bone1" Rotation="@(new Vector3(0f, 0.35f, 0.1f))" />
+                <BonePose BoneName="Bone2" Rotation="@(new Vector3(0f, 0.2f, 0f))" />
             }
         </Model>
     </Scene>
@@ -43,13 +38,6 @@
     <aside class="right-panel">
         <h2>Animated GLB</h2>
         <p class="description">Model: Bulbasaur_ColladaMax.DAE from local demo assets.</p>
-        <p class="description">Mode: @(isFirstPersonMode ? "First-person controls" : "Orbit controls")</p>
-
-        <button class="btn btn-warning" @onclick="ToggleControlMode">@(isFirstPersonMode ? "Switch to Orbit" : "Switch to First Person")</button>
-        @if (isFirstPersonMode)
-        {
-            <p class="description">Click the scene to lock the pointer, then use WASD and the mouse to move.</p>
-        }
 
         <label class="label" for="clip-picker">Clip</label>
         <select id="clip-picker" class="form-select" value="@selectedClipName" @onchange="HandleClipChanged">
@@ -173,8 +161,6 @@
 
     private bool headPoseEnabled;
 
-    private bool isFirstPersonMode = true;
-
     private double scrubTimeMs;
 
     private double playbackSpeed = 1;
@@ -252,8 +238,4 @@
         headPoseEnabled = !headPoseEnabled;
     }
 
-    private void ToggleControlMode()
-    {
-        isFirstPersonMode = !isFirstPersonMode;
-    }
 }

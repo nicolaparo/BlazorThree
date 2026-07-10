@@ -1,19 +1,12 @@
 @implements IDisposable
+@inherits Object3d
 
 <CascadingValue Value="childContainer">
     @ChildContent
 </CascadingValue>
 
 @code {
-    private readonly string id = Guid.NewGuid().ToString("N");
-
     private readonly NodeContainerContext childContainer = new();
-
-    [CascadingParameter]
-    public SceneContext? SceneContext { get; set; }
-
-    [CascadingParameter]
-    public NodeContainerContext? NodeContainer { get; set; }
 
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
@@ -21,56 +14,34 @@
     [Parameter]
     public string? ClassName { get; set; }
 
-    [Parameter]
-    public double PositionX { get; set; }
-
-    [Parameter]
-    public double PositionY { get; set; }
-
-    [Parameter]
-    public double PositionZ { get; set; }
-
-    [Parameter]
-    public double RotationX { get; set; }
-
-    [Parameter]
-    public double RotationY { get; set; }
-
-    [Parameter]
-    public double RotationZ { get; set; }
-
-    [Parameter]
-    public double ScaleX { get; set; } = 1;
-
-    [Parameter]
-    public double ScaleY { get; set; } = 1;
-
-    [Parameter]
-    public double ScaleZ { get; set; } = 1;
-
     protected override void OnParametersSet()
     {
-        childContainer.ParentId = id;
+        RemovePreviousIfIdChanged(previousId => SceneContext?.RemoveGroup(previousId));
+
+        var groupId = CurrentId;
+        childContainer.ParentId = groupId;
+
+        SceneContext?.SetGroupMouseHandlers(
+            groupId,
+            ClickHandler,
+            MouseEnterHandler,
+            MouseLeaveHandler);
 
         SceneContext?.UpsertGroup(new GroupState
         {
-            Id = id,
+            Id = groupId,
             ParentId = NodeContainer?.ParentId,
             ClassName = ClassName,
-            PositionX = PositionX,
-            PositionY = PositionY,
-            PositionZ = PositionZ,
-            RotationX = RotationX,
-            RotationY = RotationY,
-            RotationZ = RotationZ,
-            ScaleX = ScaleX,
-            ScaleY = ScaleY,
-            ScaleZ = ScaleZ
+            Position = Position,
+            Rotation = Rotation,
+            Scale = Scale
         });
+
+        MarkPublished();
     }
 
     public void Dispose()
     {
-        SceneContext?.RemoveGroup(id);
+        SceneContext?.RemoveGroup(GetDisposeId());
     }
 }

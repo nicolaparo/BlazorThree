@@ -2,10 +2,11 @@ import {
     applyTransition,
     cloneTransform,
     ease,
-    interpolateValue,
+    interpolateVector,
     lerp,
     mergeTransform,
     now,
+    readVector3,
     readObjectTransform,
     setObjectTransform,
     transformKeys,
@@ -64,15 +65,9 @@ function sampleTimelineTrack(track, currentTimeMs, loop) {
         const t = ease(raw, value(track, "easing", "Easing", "linear"));
 
         return {
-            positionX: interpolateValue(value(left, "positionX", "PositionX", null), value(right, "positionX", "PositionX", null), t),
-            positionY: interpolateValue(value(left, "positionY", "PositionY", null), value(right, "positionY", "PositionY", null), t),
-            positionZ: interpolateValue(value(left, "positionZ", "PositionZ", null), value(right, "positionZ", "PositionZ", null), t),
-            rotationX: interpolateValue(value(left, "rotationX", "RotationX", null), value(right, "rotationX", "RotationX", null), t),
-            rotationY: interpolateValue(value(left, "rotationY", "RotationY", null), value(right, "rotationY", "RotationY", null), t),
-            rotationZ: interpolateValue(value(left, "rotationZ", "RotationZ", null), value(right, "rotationZ", "RotationZ", null), t),
-            scaleX: interpolateValue(value(left, "scaleX", "ScaleX", null), value(right, "scaleX", "ScaleX", null), t),
-            scaleY: interpolateValue(value(left, "scaleY", "ScaleY", null), value(right, "scaleY", "ScaleY", null), t),
-            scaleZ: interpolateValue(value(left, "scaleZ", "ScaleZ", null), value(right, "scaleZ", "ScaleZ", null), t)
+            position: interpolateVector(readVector3(left, "position", "Position", null), readVector3(right, "position", "Position", null), t),
+            rotation: interpolateVector(readVector3(left, "rotation", "Rotation", null), readVector3(right, "rotation", "Rotation", null), t),
+            scale: interpolateVector(readVector3(left, "scale", "Scale", null), readVector3(right, "scale", "Scale", null), t)
         };
     }
 
@@ -220,7 +215,11 @@ export function updateRecordAnimation(record, timestamp) {
     const next = {};
 
     for (const key of transformKeys) {
-        next[key] = lerp(record.animation.from[key], record.animation.to[key], t);
+        next[key] = {
+            x: lerp(record.animation.from[key].x, record.animation.to[key].x, t),
+            y: lerp(record.animation.from[key].y, record.animation.to[key].y, t),
+            z: lerp(record.animation.from[key].z, record.animation.to[key].z, t)
+        };
     }
 
     setObjectTransform(record.object3D, next);

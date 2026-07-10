@@ -1,0 +1,19 @@
+@code {
+    [CascadingParameter]
+    public MeshContext? MeshContext { get; set; }
+
+    [Parameter]
+    public bool Wireframe { get; set; }
+
+    [Parameter]
+    public bool FlatShading { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        MeshContext?.SetMaterial?.Invoke(new MeshNormalMaterialDefinition
+        {
+            Wireframe = Wireframe,
+            FlatShading = FlatShading
+        });
+    }
+}

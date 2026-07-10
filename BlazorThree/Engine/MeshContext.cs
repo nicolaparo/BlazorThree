@@ -1,4 +1,5 @@
 using BlazorThree.Geometries;
+using BlazorThree.Materials;
 
 namespace BlazorThree.Engine;
 

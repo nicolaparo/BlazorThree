@@ -1,4 +1,7 @@
 @implements IDisposable
+@implements IPositionable
+@implements IRotatable
+@implements IScalable
 
 @code {
     private readonly string id = Guid.NewGuid().ToString("N");
@@ -10,31 +13,31 @@
     public double TimeMs { get; set; }
 
     [Parameter]
-    public double? PositionX { get; set; }
+    public Vector3? Position { get; set; }
 
     [Parameter]
-    public double? PositionY { get; set; }
+    public Vector3? Rotation { get; set; }
 
     [Parameter]
-    public double? PositionZ { get; set; }
+    public Vector3? Scale { get; set; }
 
-    [Parameter]
-    public double? RotationX { get; set; }
+    Vector3 IPositionable.Position
+    {
+        get => Position ?? Vector3.Zero;
+        set => Position = value;
+    }
 
-    [Parameter]
-    public double? RotationY { get; set; }
+    Vector3 IRotatable.Rotation
+    {
+        get => Rotation ?? Vector3.Zero;
+        set => Rotation = value;
+    }
 
-    [Parameter]
-    public double? RotationZ { get; set; }
-
-    [Parameter]
-    public double? ScaleX { get; set; }
-
-    [Parameter]
-    public double? ScaleY { get; set; }
-
-    [Parameter]
-    public double? ScaleZ { get; set; }
+    Vector3 IScalable.Scale
+    {
+        get => Scale ?? Vector3.Zero;
+        set => Scale = value;
+    }
 
     protected override void OnParametersSet()
     {
@@ -42,15 +45,9 @@
         {
             Id = id,
             TimeMs = TimeMs,
-            PositionX = PositionX,
-            PositionY = PositionY,
-            PositionZ = PositionZ,
-            RotationX = RotationX,
-            RotationY = RotationY,
-            RotationZ = RotationZ,
-            ScaleX = ScaleX,
-            ScaleY = ScaleY,
-            ScaleZ = ScaleZ
+            Position = Position,
+            Rotation = Rotation,
+            Scale = Scale
         });
     }
 

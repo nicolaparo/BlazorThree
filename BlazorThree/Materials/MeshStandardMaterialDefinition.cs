@@ -1,9 +1,4 @@
-namespace BlazorThree.Engine;
-
-public abstract class MaterialDefinition
-{
-    public string Kind { get; init; } = string.Empty;
-}
+namespace BlazorThree.Materials;
 
 public sealed class MeshStandardMaterialDefinition : MaterialDefinition
 {

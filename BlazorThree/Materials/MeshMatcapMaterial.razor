@@ -1,0 +1,19 @@
+@code {
+    [CascadingParameter]
+    public MeshContext? MeshContext { get; set; }
+
+    [Parameter]
+    public string Color { get; set; } = "#ffffff";
+
+    [Parameter]
+    public string? MatcapUrl { get; set; }
+
+    protected override void OnParametersSet()
+    {
+        MeshContext?.SetMaterial?.Invoke(new MeshMatcapMaterialDefinition
+        {
+            Color = Color,
+            MatcapUrl = MatcapUrl
+        });
+    }
+}

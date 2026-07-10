@@ -3,7 +3,7 @@ import { ColladaLoader } from "https://esm.sh/three@0.178.0/examples/jsm/loaders
 import { FBXLoader } from "https://esm.sh/three@0.178.0/examples/jsm/loaders/FBXLoader";
 import { GLTFLoader } from "https://esm.sh/three@0.178.0/examples/jsm/loaders/GLTFLoader";
 import { buildGeometry, buildMaterial } from "./assets.js";
-import { applyTransition, mergeTransform, readBaseTransform, signature, transformSignature, value } from "./shared.js";
+import { applyTransition, mergeTransform, readBaseTransform, readVector3, signature, transformSignature, value } from "./shared.js";
 import { applyRecordTarget } from "./timeline.js";
 
 function getParentObject(state, parentId) {
@@ -273,36 +273,30 @@ function applyBonePoses(record, modelState) {
             continue;
         }
 
-        const positionX = value(pose, "positionX", "PositionX", null);
-        const positionY = value(pose, "positionY", "PositionY", null);
-        const positionZ = value(pose, "positionZ", "PositionZ", null);
-        if (positionX !== null || positionY !== null || positionZ !== null) {
+        const position = readVector3(pose, "position", "Position", null);
+        if (position) {
             bone.position.set(
-                positionX ?? bone.position.x,
-                positionY ?? bone.position.y,
-                positionZ ?? bone.position.z
+                position.x,
+                position.y,
+                position.z
             );
         }
 
-        const rotationX = value(pose, "rotationX", "RotationX", null);
-        const rotationY = value(pose, "rotationY", "RotationY", null);
-        const rotationZ = value(pose, "rotationZ", "RotationZ", null);
-        if (rotationX !== null || rotationY !== null || rotationZ !== null) {
+        const rotation = readVector3(pose, "rotation", "Rotation", null);
+        if (rotation) {
             bone.rotation.set(
-                rotationX ?? bone.rotation.x,
-                rotationY ?? bone.rotation.y,
-                rotationZ ?? bone.rotation.z
+                rotation.x,
+                rotation.y,
+                rotation.z
             );
         }
 
-        const scaleX = value(pose, "scaleX", "ScaleX", null);
-        const scaleY = value(pose, "scaleY", "ScaleY", null);
-        const scaleZ = value(pose, "scaleZ", "ScaleZ", null);
-        if (scaleX !== null || scaleY !== null || scaleZ !== null) {
+        const scale = readVector3(pose, "scale", "Scale", null);
+        if (scale) {
             bone.scale.set(
-                scaleX ?? bone.scale.x,
-                scaleY ?? bone.scale.y,
-                scaleZ ?? bone.scale.z
+                scale.x,
+                scale.y,
+                scale.z
             );
         }
     }
@@ -482,6 +476,7 @@ export function syncMeshes(state, meshes, transitionMap, timelineMap) {
         let record = state.meshes.get(meshId);
         if (!record) {
             const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: "#00a2ff" }));
+            mesh.userData.blazorThreePick = { id: meshId, type: "mesh" };
             record = {
                 mesh,
                 object3D: mesh,
@@ -497,6 +492,8 @@ export function syncMeshes(state, meshes, transitionMap, timelineMap) {
             };
             state.meshes.set(meshId, record);
         }
+
+        record.mesh.userData.blazorThreePick = { id: meshId, type: "mesh" };
 
         const parentId = value(meshState, "parentId", "ParentId", null);
         attachToParent(getParentObject(state, parentId), record.mesh);
@@ -551,6 +548,7 @@ export function syncModels(state, models, transitionMap, timelineMap) {
         let record = state.models.get(modelId);
         if (!record) {
             const container = new THREE.Group();
+            container.userData.blazorThreePick = { id: modelId, type: "model" };
             record = {
                 container,
                 object3D: container,
@@ -574,6 +572,8 @@ export function syncModels(state, models, transitionMap, timelineMap) {
             };
             state.models.set(modelId, record);
         }
+
+        record.container.userData.blazorThreePick = { id: modelId, type: "model" };
 
         const parentId = value(modelState, "parentId", "ParentId", null);
         attachToParent(getParentObject(state, parentId), record.container);
