@@ -35,7 +35,12 @@
             {
                 <Mesh id="sphere"
                       Position="@(new Vector3(1.7f, 0.1f, 0f))"
+                      Scale="sphereScale"
+                      OnMouseEnter="() => sphereScale = Vector3.One * 1.5f"
+                      OnMouseLeave="() => sphereScale = Vector3.One"
                       OnClick='() => selectedElement = "sphere"'>
+                    
+                    <Transition Property="@nameof(Mesh.Scale)" DurationMs="500" Easing="@Easings.EaseInOutQuad"></Transition>
                     <SphereGeometry Radius="0.9" WidthSegments="48" HeightSegments="24"/>
                     <MeshStandardMaterial Color="#ffffff"
                                           TextureUrl="https://threejs.org/examples/textures/uv_grid_opengl.jpg"
@@ -115,4 +120,5 @@
     private bool boxVisible = true;
     private bool sphereVisible = true;
     private string selectedElement = "";
+    private Vector3 sphereScale = Vector3.One;
 }
