@@ -1,6 +1,6 @@
 namespace BlazorThree.Geometries;
 
-public sealed class SphereGeometryDefinition : GeometryDefinition
+internal sealed class SphereGeometryDefinition : GeometryDefinition
 {
     public SphereGeometryDefinition()
     {

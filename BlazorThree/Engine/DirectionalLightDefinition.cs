@@ -1,6 +1,6 @@
 namespace BlazorThree.Engine;
 
-public sealed class DirectionalLightDefinition : LightDefinition
+internal sealed class DirectionalLightDefinition : LightDefinition
 {
     public DirectionalLightDefinition()
     {

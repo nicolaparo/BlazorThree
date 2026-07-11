@@ -1,6 +1,6 @@
 namespace BlazorThree.Geometries;
 
-public sealed class DodecahedronGeometryDefinition : GeometryDefinition
+internal sealed class DodecahedronGeometryDefinition : GeometryDefinition
 {
     public DodecahedronGeometryDefinition()
     {

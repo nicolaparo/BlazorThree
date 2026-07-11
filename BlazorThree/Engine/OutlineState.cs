@@ -1,6 +1,6 @@
 namespace BlazorThree.Engine;
 
-public sealed class OutlineState
+internal sealed class OutlineState
 {
     public string Color { get; set; } = "#ffffff";
 

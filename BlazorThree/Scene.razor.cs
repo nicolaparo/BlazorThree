@@ -6,6 +6,9 @@ using System.Numerics;
 
 namespace BlazorThree;
 
+/// <summary>
+/// Hosts a Three.js renderer and publishes the declarative Blazor scene graph to the browser.
+/// </summary>
 public partial class Scene
 {
     private readonly SceneContext sceneContext = new();
@@ -28,38 +31,71 @@ public partial class Scene
 
     private bool isDisposed;
 
+    /// <summary>
+    /// Gets or sets the CSS width applied to the scene host element.
+    /// </summary>
     [Parameter]
     public string Width { get; set; } = "100%";
 
+    /// <summary>
+    /// Gets or sets the CSS height applied to the scene host element.
+    /// </summary>
     [Parameter]
     public string Height { get; set; } = "420px";
 
+    /// <summary>
+    /// Gets or sets the renderer clear color used for the scene background.
+    /// </summary>
     [Parameter]
     public string ClearColor { get; set; } = "#0d1117";
 
+    /// <summary>
+    /// Gets or sets the debounce window, in milliseconds, used to batch scene synchronization updates.
+    /// </summary>
     [Parameter]
     public int SyncBatchWindowMs { get; set; } = 8;
 
+    /// <summary>
+    /// Gets or sets a callback that receives model clip metadata after a model asset has been loaded.
+    /// </summary>
     [Parameter]
     public EventCallback<ModelClipInfo> ModelClipsChanged { get; set; }
 
+    /// <summary>
+    /// Gets or sets a callback raised when the scene host element is clicked.
+    /// </summary>
     [Parameter]
-    public EventCallback<MouseEventArgs> Click { get; set; }
+    public EventCallback<MouseEventArgs> OnClick { get; set; }
 
+    /// <summary>
+    /// Gets or sets a callback raised when the pointer enters the scene host element.
+    /// </summary>
     [Parameter]
-    public EventCallback<MouseEventArgs> MouseEnter { get; set; }
+    public EventCallback<MouseEventArgs> OnMouseEnter { get; set; }
 
+    /// <summary>
+    /// Gets or sets a callback raised when the pointer leaves the scene host element.
+    /// </summary>
     [Parameter]
-    public EventCallback<MouseEventArgs> MouseLeave { get; set; }
+    public EventCallback<MouseEventArgs> OnMouseLeave { get; set; }
 
+    /// <summary>
+    /// Gets or sets the child components that define the scene graph.
+    /// </summary>
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
 
+    /// <summary>
+    /// Subscribes to scene graph changes before the first render.
+    /// </summary>
     protected override void OnInitialized()
     {
         sceneContext.Changed += HandleSceneChanged;
     }
 
+    /// <summary>
+    /// Initializes the JavaScript scene bridge after the host element is first rendered.
+    /// </summary>
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (!firstRender)
@@ -73,6 +109,9 @@ public partial class Scene
         await SyncSceneAsync(forceFull: true);
     }
 
+    /// <summary>
+    /// Receives animation clip metadata from the JavaScript runtime for a loaded model.
+    /// </summary>
     [JSInvokable]
     public async Task OnModelClipsChanged(string modelId, string sourceUrl, string[] clipNames)
     {
@@ -89,18 +128,27 @@ public partial class Scene
         }
     }
 
+    /// <summary>
+    /// Dispatches a click event for a picked scene element.
+    /// </summary>
     [JSInvokable]
     public Task OnSceneElementClick(string elementId, string elementType)
     {
         return sceneContext.DispatchElementClickAsync(elementId, elementType);
     }
 
+    /// <summary>
+    /// Dispatches a mouse enter event for a picked scene element.
+    /// </summary>
     [JSInvokable]
     public Task OnSceneElementMouseEnter(string elementId, string elementType)
     {
         return sceneContext.DispatchElementMouseEnterAsync(elementId, elementType);
     }
 
+    /// <summary>
+    /// Dispatches a mouse leave event for a picked scene element.
+    /// </summary>
     [JSInvokable]
     public Task OnSceneElementMouseLeave(string elementId, string elementType)
     {
@@ -339,6 +387,9 @@ public partial class Scene
         return ToJsVector(vector.Value);
     }
 
+    /// <summary>
+    /// Releases JavaScript resources associated with the rendered scene.
+    /// </summary>
     public async ValueTask DisposeAsync()
     {
         lock (syncBatchLock)

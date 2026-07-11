@@ -1,6 +1,6 @@
 namespace BlazorThree.Geometries;
 
-public sealed class TorusGeometryDefinition : GeometryDefinition
+internal sealed class TorusGeometryDefinition : GeometryDefinition
 {
     public TorusGeometryDefinition()
     {

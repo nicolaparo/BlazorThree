@@ -1,6 +1,6 @@
 namespace BlazorThree.Geometries;
 
-public sealed class CylinderGeometryDefinition : GeometryDefinition
+internal sealed class CylinderGeometryDefinition : GeometryDefinition
 {
     public CylinderGeometryDefinition()
     {

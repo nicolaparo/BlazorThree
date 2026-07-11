@@ -1,6 +1,6 @@
 namespace BlazorThree.Engine;
 
-public sealed class TimelineContext
+internal sealed class TimelineContext
 {
     public Action<TimelineTrackState>? UpsertTrack { get; set; }
 

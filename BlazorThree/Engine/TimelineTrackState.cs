@@ -1,6 +1,6 @@
 namespace BlazorThree.Engine;
 
-public sealed class TimelineTrackState
+internal sealed class TimelineTrackState
 {
     public required string Id { get; set; }
 

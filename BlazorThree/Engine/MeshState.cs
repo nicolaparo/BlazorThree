@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace BlazorThree.Engine;
 
-public sealed class MeshState : IPositionable, IRotatable, IScalable
+internal sealed class MeshState : IPositionable, IRotatable, IScalable
 {
     public required string Id { get; set; }
 

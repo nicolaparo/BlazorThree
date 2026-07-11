@@ -3,7 +3,7 @@ using BlazorThree.Materials;
 
 namespace BlazorThree.Engine;
 
-public sealed class MeshContext
+internal sealed class MeshContext
 {
     public Action<GeometryDefinition>? SetGeometry { get; set; }
 

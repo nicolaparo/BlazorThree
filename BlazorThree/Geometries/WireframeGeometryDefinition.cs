@@ -1,6 +1,6 @@
 namespace BlazorThree.Geometries;
 
-public sealed class WireframeGeometryDefinition : GeometryDefinition
+internal sealed class WireframeGeometryDefinition : GeometryDefinition
 {
     public WireframeGeometryDefinition()
     {

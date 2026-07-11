@@ -1,6 +1,6 @@
 namespace BlazorThree.Geometries;
 
-public sealed class TubeGeometryDefinition : GeometryDefinition
+internal sealed class TubeGeometryDefinition : GeometryDefinition
 {
     public TubeGeometryDefinition()
     {

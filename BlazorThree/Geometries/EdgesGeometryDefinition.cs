@@ -1,6 +1,6 @@
 namespace BlazorThree.Geometries;
 
-public sealed class EdgesGeometryDefinition : GeometryDefinition
+internal sealed class EdgesGeometryDefinition : GeometryDefinition
 {
     public EdgesGeometryDefinition()
     {

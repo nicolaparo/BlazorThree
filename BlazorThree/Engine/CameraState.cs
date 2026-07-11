@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace BlazorThree.Engine;
 
-public sealed class CameraState : IPositionable, IRotatable
+internal sealed class CameraState : IPositionable, IRotatable
 {
     public double Fov { get; set; } = 75;
 

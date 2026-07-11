@@ -1,6 +1,6 @@
 namespace BlazorThree.Engine;
 
-public sealed class NodeContainerContext
+internal sealed class NodeContainerContext
 {
     public string? ParentId { get; set; }
 }

@@ -1,6 +1,6 @@
 namespace BlazorThree.Materials;
 
-public sealed class MeshPhongMaterialDefinition : MaterialDefinition
+internal sealed class MeshPhongMaterialDefinition : MaterialDefinition
 {
     public MeshPhongMaterialDefinition()
     {

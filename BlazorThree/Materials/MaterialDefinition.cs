@@ -1,6 +1,6 @@
 namespace BlazorThree.Materials;
 
-public abstract class MaterialDefinition
+internal abstract class MaterialDefinition
 {
     public string Kind { get; init; } = string.Empty;
 }

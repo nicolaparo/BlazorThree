@@ -1,6 +1,6 @@
 namespace BlazorThree.Geometries;
 
-public sealed class LatheGeometryDefinition : GeometryDefinition
+internal sealed class LatheGeometryDefinition : GeometryDefinition
 {
     public LatheGeometryDefinition()
     {

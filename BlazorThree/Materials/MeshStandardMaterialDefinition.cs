@@ -1,6 +1,6 @@
 namespace BlazorThree.Materials;
 
-public sealed class MeshStandardMaterialDefinition : MaterialDefinition
+internal sealed class MeshStandardMaterialDefinition : MaterialDefinition
 {
     public MeshStandardMaterialDefinition()
     {

@@ -1,6 +1,6 @@
 namespace BlazorThree.Engine;
 
-public sealed class TimelineState
+internal sealed class TimelineState
 {
     public required string Name { get; set; }
 

@@ -1,6 +1,6 @@
 namespace BlazorThree.Materials;
 
-public sealed class MeshToonMaterialDefinition : MaterialDefinition
+internal sealed class MeshToonMaterialDefinition : MaterialDefinition
 {
     public MeshToonMaterialDefinition()
     {

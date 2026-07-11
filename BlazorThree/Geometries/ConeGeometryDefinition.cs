@@ -1,6 +1,6 @@
 namespace BlazorThree.Geometries;
 
-public sealed class ConeGeometryDefinition : GeometryDefinition
+internal sealed class ConeGeometryDefinition : GeometryDefinition
 {
     public ConeGeometryDefinition()
     {

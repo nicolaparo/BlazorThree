@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace BlazorThree.Engine;
 
-public sealed class LightState : IPositionable
+internal sealed class LightState : IPositionable
 {
     public LightDefinition Type { get; set; } = LightDefinitions.Directional;
 

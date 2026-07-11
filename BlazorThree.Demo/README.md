@@ -2,6 +2,8 @@
 
 Demo app for BlazorThree on .NET 10.
 
+BlazorThree and this demo are still preview features. Expect ongoing changes to the component API, supported scenarios, and documentation.
+
 ## What it shows
 
 - Blazor scene graph using Scene, Camera, Light, and Mesh components

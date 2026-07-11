@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace BlazorThree.Engine;
 
-public sealed class TransitionState : IPositionable, IRotatable, IScalable
+internal sealed class TransitionState : IPositionable, IRotatable, IScalable
 {
     public required string ClassName { get; set; }
 

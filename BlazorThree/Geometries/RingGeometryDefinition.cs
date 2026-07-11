@@ -1,6 +1,6 @@
 namespace BlazorThree.Geometries;
 
-public sealed class RingGeometryDefinition : GeometryDefinition
+internal sealed class RingGeometryDefinition : GeometryDefinition
 {
     public RingGeometryDefinition()
     {

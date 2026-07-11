@@ -1,6 +1,6 @@
 namespace BlazorThree.Geometries;
 
-public abstract class GeometryDefinition
+internal abstract class GeometryDefinition
 {
     public string Kind { get; init; } = string.Empty;
 }

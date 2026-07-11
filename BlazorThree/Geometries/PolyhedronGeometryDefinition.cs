@@ -1,6 +1,6 @@
 namespace BlazorThree.Geometries;
 
-public sealed class PolyhedronGeometryDefinition : GeometryDefinition
+internal sealed class PolyhedronGeometryDefinition : GeometryDefinition
 {
     public PolyhedronGeometryDefinition()
     {

@@ -5,9 +5,7 @@
 <PageTitle>BlazorThree Demo</PageTitle>
 
 <div class="scene-page">
-    <Scene Width="100%"
-           Height="100%"
-           ClearColor="#101925">
+    <Scene Width="100%" Height="100%" ClearColor="#101925">
         <Camera Fov="65" Position="@(new Vector3(0f, 1.4f, 7f))" />
         <Light Type="LightDefinitions.Directional" Intensity="1.6" Position="@(new Vector3(6f, 8f, 3f))" />
         <OrbitControls Enabled="true" EnableDamping="true" DampingFactor="0.09" />
@@ -18,31 +16,31 @@
         <Group Position="@Vector3.Zero" ClassName="@currentStageClass">
 
             <Mesh id="cube"
-                Position="@(new Vector3(-1.7f, 0.1f, 0f))"
-                Click="OnElementClick"
-                MouseEnter="OnElementMouseEnter"
-                MouseLeave="OnElementMouseLeave">
-                <BoxGeometry Width="1" Height="1" Depth="1"/>
-                <MeshStandardMaterial Color="#f5f500" Metalness="0.05" Roughness="0.55"/>
+                  Position="@(new Vector3(-1.7f, 0.1f, 0f))"
+                  OnClick="OnElementClick"
+                  OnMouseEnter="OnElementMouseEnter"
+                  OnMouseLeave="OnElementMouseLeave">
+                <BoxGeometry Width="1" Height="1" Depth="1" />
+                <MeshStandardMaterial Color="#f5f500" Metalness="0.05" Roughness="0.55" />
                 @if (TryGetOutlineColor("cube") is string cubeOutlineColor)
                 {
-                    <Outline Color="@cubeOutlineColor" Opacity="0.98"/>
+                    <Outline Color="@cubeOutlineColor" Opacity="0.98" />
                 }
             </Mesh>
 
             <Mesh id="sphere"
-                Position="@(new Vector3(1.7f, 0.1f, 0f))"
-                Click="OnElementClick"
-                MouseEnter="OnElementMouseEnter"
-                MouseLeave="OnElementMouseLeave">
-                <SphereGeometry Radius="0.9" WidthSegments="48" HeightSegments="24"/>
+                  Position="@(new Vector3(1.7f, 0.1f, 0f))"
+                  OnClick="OnElementClick"
+                  OnMouseEnter="OnElementMouseEnter"
+                  OnMouseLeave="OnElementMouseLeave">
+                <SphereGeometry Radius="0.9" WidthSegments="48" HeightSegments="24" />
                 <MeshStandardMaterial Color="#ffffff"
                                       TextureUrl="https://threejs.org/examples/textures/uv_grid_opengl.jpg"
                                       Metalness="0.05"
-                                      Roughness="0.55"/>
+                                      Roughness="0.55" />
                 @if (TryGetOutlineColor("sphere") is string sphereOutlineColor)
                 {
-                    <Outline Color="@sphereOutlineColor" Opacity="0.98"/>
+                    <Outline Color="@sphereOutlineColor" Opacity="0.98" />
                 }
             </Mesh>
         </Group>
@@ -99,9 +97,9 @@
 </style>
 
 @code {
-   
+
     private string currentStageClass = "stage-idle";
-    
+
     private string? hoveredElementId;
 
     private string? selectedElementId;

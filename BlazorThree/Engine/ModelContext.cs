@@ -1,6 +1,6 @@
 namespace BlazorThree.Engine;
 
-public sealed class ModelContext
+internal sealed class ModelContext
 {
     public Action<string, BonePoseState>? UpsertBonePose { get; set; }
 

@@ -1,6 +1,6 @@
 namespace BlazorThree.Engine;
 
-public sealed class SceneContext
+internal sealed class SceneContext
 {
     private const string MeshElementType = "mesh";
 

@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace BlazorThree.Engine;
 
-public sealed class ModelState : IPositionable, IRotatable, IScalable
+internal sealed class ModelState : IPositionable, IRotatable, IScalable
 {
     public required string Id { get; set; }
 

@@ -1,6 +1,6 @@
 namespace BlazorThree.Geometries;
 
-public sealed class PlaneGeometryDefinition : GeometryDefinition
+internal sealed class PlaneGeometryDefinition : GeometryDefinition
 {
     public PlaneGeometryDefinition()
     {

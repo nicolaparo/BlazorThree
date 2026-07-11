@@ -1,6 +1,6 @@
 namespace BlazorThree.Engine;
 
-public sealed class SceneDeltaState
+internal sealed class SceneDeltaState
 {
     public bool IsFull { get; init; }
 

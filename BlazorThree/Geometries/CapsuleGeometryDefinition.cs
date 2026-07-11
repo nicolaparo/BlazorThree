@@ -1,6 +1,6 @@
 namespace BlazorThree.Geometries;
 
-public sealed class CapsuleGeometryDefinition : GeometryDefinition
+internal sealed class CapsuleGeometryDefinition : GeometryDefinition
 {
     public CapsuleGeometryDefinition()
     {

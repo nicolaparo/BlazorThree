@@ -1,6 +1,6 @@
 namespace BlazorThree.Engine;
 
-public sealed class SceneState
+internal sealed class SceneState
 {
     public CameraState Camera { get; set; } = new();
 

@@ -1,6 +1,6 @@
 namespace BlazorThree.Geometries;
 
-public sealed class ExtrudeGeometryDefinition : GeometryDefinition
+internal sealed class ExtrudeGeometryDefinition : GeometryDefinition
 {
     public ExtrudeGeometryDefinition()
     {

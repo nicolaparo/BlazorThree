@@ -1,6 +1,6 @@
 namespace BlazorThree.Geometries;
 
-public sealed class CircleGeometryDefinition : GeometryDefinition
+internal sealed class CircleGeometryDefinition : GeometryDefinition
 {
     public CircleGeometryDefinition()
     {

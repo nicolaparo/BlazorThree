@@ -1,6 +1,6 @@
 namespace BlazorThree.Engine;
 
-public sealed class AmbientLightDefinition : LightDefinition
+internal sealed class AmbientLightDefinition : LightDefinition
 {
     public AmbientLightDefinition()
     {

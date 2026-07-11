@@ -1,6 +1,6 @@
 namespace BlazorThree.Geometries;
 
-public sealed class IcosahedronGeometryDefinition : GeometryDefinition
+internal sealed class IcosahedronGeometryDefinition : GeometryDefinition
 {
     public IcosahedronGeometryDefinition()
     {

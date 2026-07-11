@@ -1,6 +1,6 @@
 namespace BlazorThree.Engine;
 
-public sealed class OrbitControlsState
+internal sealed class OrbitControlsState
 {
     public bool Enabled { get; set; }
 
