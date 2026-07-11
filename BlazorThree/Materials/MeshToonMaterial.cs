@@ -7,17 +7,28 @@ namespace BlazorThree.Materials;
 /// <summary>
 /// Publishes toon material settings to the containing mesh.
 /// </summary>
-public class MeshToonMaterial : ComponentBase
+public class MeshToonMaterial : TransitionScopedComponentBase
 {
-    [CascadingParameter]
-    private MeshContext? MeshContext { get; set; }
+    /// <summary>
+    /// Gets or sets the color.
+    /// </summary>
+    
 
+    [Animatable]
     [Parameter]
     public string Color { get; set; } = "#00a2ff";
+    /// <summary>
+    /// Gets or sets the texture url.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public string? TextureUrl { get; set; }
+    /// <summary>
+    /// Gets or sets the gradient map url.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public string? GradientMapUrl { get; set; }
 
@@ -31,4 +42,4 @@ public class MeshToonMaterial : ComponentBase
         });
     }
 }
-#pragma warning restore CS1591
+

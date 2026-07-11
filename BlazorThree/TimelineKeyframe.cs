@@ -10,6 +10,9 @@ namespace BlazorThree;
 public class TimelineKeyframe : ComponentBase, IDisposable, IPositionable, IRotatable, IScalable
 {
     private readonly string id = Guid.NewGuid().ToString("N");
+    /// <summary>
+    /// Gets or sets the timeline track context.
+    /// </summary>
 
     [CascadingParameter]
     private TimelineTrackContext? TimelineTrackContext { get; set; }

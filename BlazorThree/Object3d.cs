@@ -37,18 +37,21 @@ public abstract class Object3d : ComponentBase, IPositionable, IRotatable, IScal
     /// <summary>
     /// Gets or sets the local-space position for the scene node.
     /// </summary>
+    [Animatable]
     [Parameter]
     public Vector3 Position { get; set; }
 
     /// <summary>
     /// Gets or sets the local-space rotation for the scene node, expressed in radians.
     /// </summary>
+    [Animatable]
     [Parameter]
     public Vector3 Rotation { get; set; }
 
     /// <summary>
     /// Gets or sets the local-space scale for the scene node.
     /// </summary>
+    [Animatable]
     [Parameter]
     public Vector3 Scale { get; set; } = Vector3.One;
 

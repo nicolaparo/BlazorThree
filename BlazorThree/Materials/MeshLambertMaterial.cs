@@ -7,17 +7,28 @@ namespace BlazorThree.Materials;
 /// <summary>
 /// Publishes Lambert material settings to the containing mesh.
 /// </summary>
-public class MeshLambertMaterial : ComponentBase
+public class MeshLambertMaterial : TransitionScopedComponentBase
 {
-    [CascadingParameter]
-    private MeshContext? MeshContext { get; set; }
+    /// <summary>
+    /// Gets or sets the color.
+    /// </summary>
+    
 
+    [Animatable]
     [Parameter]
     public string Color { get; set; } = "#00a2ff";
+    /// <summary>
+    /// Gets or sets the emissive.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public string Emissive { get; set; } = "#000000";
+    /// <summary>
+    /// Gets or sets the texture url.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public string? TextureUrl { get; set; }
 
@@ -31,4 +42,4 @@ public class MeshLambertMaterial : ComponentBase
         });
     }
 }
-#pragma warning restore CS1591
+

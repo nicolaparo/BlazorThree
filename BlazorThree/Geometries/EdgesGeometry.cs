@@ -7,20 +7,35 @@ namespace BlazorThree.Geometries;
 /// <summary>
 /// Publishes edge geometry settings to the containing mesh.
 /// </summary>
-public class EdgesGeometry : ComponentBase
+public class EdgesGeometry : TransitionScopedComponentBase
 {
-    [CascadingParameter]
-    private MeshContext? MeshContext { get; set; }
+    /// <summary>
+    /// Gets or sets the source width.
+    /// </summary>
+    
 
+    [Animatable]
     [Parameter]
     public double SourceWidth { get; set; } = 1;
+    /// <summary>
+    /// Gets or sets the source height.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public double SourceHeight { get; set; } = 1;
+    /// <summary>
+    /// Gets or sets the source depth.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public double SourceDepth { get; set; } = 1;
+    /// <summary>
+    /// Gets or sets the threshold angle.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public double ThresholdAngle { get; set; } = 1;
 
@@ -38,4 +53,4 @@ public class EdgesGeometry : ComponentBase
         });
     }
 }
-#pragma warning restore CS1591
+

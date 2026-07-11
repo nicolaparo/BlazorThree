@@ -8,23 +8,42 @@ namespace BlazorThree.Geometries;
 /// <summary>
 /// Publishes torus geometry settings to the containing mesh.
 /// </summary>
-public class TorusGeometry : ComponentBase
+public class TorusGeometry : TransitionScopedComponentBase
 {
-    [CascadingParameter]
-    private MeshContext? MeshContext { get; set; }
+    /// <summary>
+    /// Gets or sets the radius.
+    /// </summary>
+    
 
+    [Animatable]
     [Parameter]
     public double Radius { get; set; } = 1;
+    /// <summary>
+    /// Gets or sets the tube.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public double Tube { get; set; } = 0.4;
+    /// <summary>
+    /// Gets or sets the radial segments.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public int RadialSegments { get; set; } = 12;
+    /// <summary>
+    /// Gets or sets the tubular segments.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public int TubularSegments { get; set; } = 48;
+    /// <summary>
+    /// Gets or sets the arc.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public double Arc { get; set; } = Math.PI * 2;
 
@@ -40,4 +59,4 @@ public class TorusGeometry : ComponentBase
         });
     }
 }
-#pragma warning restore CS1591
+

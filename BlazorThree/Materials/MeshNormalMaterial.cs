@@ -7,14 +7,21 @@ namespace BlazorThree.Materials;
 /// <summary>
 /// Publishes normal material settings to the containing mesh.
 /// </summary>
-public class MeshNormalMaterial : ComponentBase
+public class MeshNormalMaterial : TransitionScopedComponentBase
 {
-    [CascadingParameter]
-    private MeshContext? MeshContext { get; set; }
+    /// <summary>
+    /// Gets or sets the wireframe.
+    /// </summary>
+    
 
+    [Animatable]
     [Parameter]
     public bool Wireframe { get; set; }
+    /// <summary>
+    /// Gets or sets the flat shading.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public bool FlatShading { get; set; }
 
@@ -27,4 +34,4 @@ public class MeshNormalMaterial : ComponentBase
         });
     }
 }
-#pragma warning restore CS1591
+

@@ -1,4 +1,7 @@
 namespace BlazorThree.Engine;
+/// <summary>
+/// Represents scene context.
+/// </summary>
 
 internal sealed class SceneContext
 {

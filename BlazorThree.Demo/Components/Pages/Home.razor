@@ -6,31 +6,43 @@
 
 <div class="scene-page">
     <Scene Width="100%" Height="100%" ClearColor="#101925">
-        <Camera Fov="65" Position="@(new(0f, 1.4f, 7f))" />
-        <Light Type="LightDefinitions.Directional" Intensity="1.6" Position="@(new(6f, 8f, 3f))" />
+        <Camera Fov="65" Position="@(cinematicCamera ? new(0f, 2.2f, 9f) : new(0f, 1.4f, 7f))">
+            <Transition Property="@nameof(Camera.Position)" DurationMs="900" Easing="@Easings.EaseInOutQuad" />
+        </Camera>
+        <Light Type="LightDefinitions.Directional"
+               Intensity="@(dramaticLight ? 2.2 : 1.3)"
+               Position="@(dramaticLight ? new(7f, 10f, -2f) : new(6f, 8f, 3f))"
+               Color="@(dramaticLight ? "#ffd2a1" : "#ffffff")">
+            <Transition Properties="@(new[] { nameof(Light.Intensity), nameof(Light.Position), nameof(Light.Color) })" DurationMs="900" Easing="@Easings.EaseInOutQuad" />
+        </Light>
         <OrbitControls Enabled="true" EnableDamping="true" DampingFactor="0.09" />
 
         <Group Position="@(stageActive ? new(0f, 0.9f, 0f) : Vector3.Zero)"
                Rotation="@(stageActive ? new(0f, 1.8f, 0f) : Vector3.Zero)"
                Scale="@(stageActive ? new(-1f, -1f, -1f) : Vector3.One)">
 
-            <Transition Properties="@([nameof(Group.Position), nameof(Group.Rotation), nameof(Group.Scale)])" 
-                        DurationMs="1200" 
-                        Easing="@Easings.EaseInOutQuad"/>
+            <Transition Properties="@([nameof(Group.Position), nameof(Group.Rotation), nameof(Group.Scale)])"
+                        DurationMs="1200"
+                        Easing="@Easings.EaseInOutQuad" />
 
             @if (boxVisible)
             {
                 <Mesh Position="@(new(-1.7f, 0.1f, 0f))"
                       OnClick='() => selectedElement = "box"'>
-                    <BoxGeometry Width="1" Height="1" Depth="1"/>
-                    <MeshStandardMaterial Color="#f5f500" Metalness="0.05" Roughness="0.55" />
-                    @if (selectedElement == "box")
-                    {
-                        <Outline Color="#ff0000" Opacity="0.98"/>
-                    }
+                    <BoxGeometry Width="@(boxGeometryWide ? 1.8 : 1)" Height="@(boxGeometryTall ? 1.5 : 1)" Depth="1">
+                        <Transition Properties="@(new[] { nameof(BoxGeometry.Width), nameof(BoxGeometry.Height) })"
+                                    DurationMs="200"
+                                    Easing="@Easings.EaseInOutQuad" />
+                    </BoxGeometry>
+                    <MeshStandardMaterial Color="@(boxMaterialWarm ? "#ff9d3f" : "#f5f500")" Metalness="0.05" Roughness="0.55">
+                        <Transition Property="@nameof(MeshStandardMaterial.Color)" DurationMs="200" Easing="@Easings.EaseInOutQuad" />
+                    </MeshStandardMaterial>
+                    <Outline Color="@(selectedElement == "box" ? "#ff0000" : "#8fb0ff")" Opacity="@(boxOutlineOn ? 0.98 : 0.06)">
+                        <Transition Properties="@(new[] { nameof(Outline.Opacity), nameof(Outline.Color) })" DurationMs="200" Easing="@Easings.EaseInOutQuad" />
+                    </Outline>
                 </Mesh>
             }
-            
+
             @if (sphereVisible)
             {
                 <Mesh id="sphere"
@@ -39,17 +51,19 @@
                       OnMouseEnter="() => sphereScale = Vector3.One * 1.5f"
                       OnMouseLeave="() => sphereScale = Vector3.One"
                       OnClick='() => selectedElement = "sphere"'>
-                    
-                    <Transition Property="@nameof(Mesh.Scale)" DurationMs="500" Easing="@Easings.EaseInOutQuad"></Transition>
-                    <SphereGeometry Radius="0.9" WidthSegments="48" HeightSegments="24"/>
-                    <MeshStandardMaterial Color="#ffffff"
-                                          TextureUrl="https://threejs.org/examples/textures/uv_grid_opengl.jpg"
+
+                    <Transition Property="@nameof(Mesh.Scale)" DurationMs="650" Easing="@Easings.EaseInOutQuad"></Transition>
+                    <MeshStandardMaterial TextureUrl="https://threejs.org/examples/textures/uv_grid_opengl.jpg"
                                           Metalness="0.05"
-                                          Roughness="0.55"/>
-                    @if (selectedElement == "sphere")
-                    {
-                        <Outline Color="#0000ff" Opacity="0.98"/>
-                    }
+                                          Roughness="0.55">
+                        @* <Transition Property="@nameof(MeshStandardMaterial.Color)" DurationMs="650" Easing="@Easings.EaseInOutQuad" /> *@
+                    </MeshStandardMaterial>
+                    <SphereGeometry Radius="@(sphereGeometryLarge ? 1.2 : 0.9)" WidthSegments="48" HeightSegments="24">
+                        <Transition Property="@nameof(SphereGeometry.Radius)" DurationMs="200" Easing="@Easings.EaseInOutQuad" />
+                    </SphereGeometry>
+                    <Outline Color="#0000ff" Opacity="@(selectedElement == "sphere" ? 1 : 0)">
+                        <Transition Property="@nameof(Outline.Opacity)" DurationMs="200" Easing="@Easings.EaseInOutQuad" />
+                    </Outline>
                 </Mesh>
             }
         </Group>
@@ -65,6 +79,12 @@
         <button class="btn btn-primary" @onclick="() => stageActive = !stageActive">
             Toggle Stage (@(stageActive ? "active" : "idle"))
         </button>
+        <button class="btn btn-secondary" @onclick="() => cinematicCamera = !cinematicCamera">
+            Camera Move (@(cinematicCamera ? "far" : "near"))
+        </button>
+        <button class="btn btn-secondary" @onclick="() => dramaticLight = !dramaticLight">
+            Light Transition (@(dramaticLight ? "dramatic" : "neutral"))
+        </button>
         <div class="row">
             <div class="col">
                 <input id="box-visible" type="checkbox" @bind="boxVisible" />
@@ -73,6 +93,36 @@
             <div class="col">
                 <input id="sphere-visible" type="checkbox" @bind="sphereVisible" />
                 <label for="sphere-visible">Sphere Visible</label>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <input id="box-geometry-wide" type="checkbox" @bind="boxGeometryWide" />
+                <label for="box-geometry-wide">Box Geometry Width</label>
+            </div>
+            <div class="col">
+                <input id="box-geometry-tall" type="checkbox" @bind="boxGeometryTall" />
+                <label for="box-geometry-tall">Box Geometry Height</label>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <input id="box-material-warm" type="checkbox" @bind="boxMaterialWarm" />
+                <label for="box-material-warm">Box Material Color</label>
+            </div>
+            <div class="col">
+                <input id="box-outline-on" type="checkbox" @bind="boxOutlineOn" />
+                <label for="box-outline-on">Box Outline Opacity</label>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col">
+                <input id="sphere-geometry-large" type="checkbox" @bind="sphereGeometryLarge" />
+                <label for="sphere-geometry-large">Sphere Geometry Radius</label>
+            </div>
+            <div class="col">
+                <input id="sphere-material-cool" type="checkbox" @bind="sphereMaterialCool" />
+                <label for="sphere-material-cool">Sphere Material Color</label>
             </div>
         </div>
     </aside>
@@ -121,4 +171,12 @@
     private bool sphereVisible = true;
     private string selectedElement = "";
     private Vector3 sphereScale = Vector3.One;
+    private bool cinematicCamera;
+    private bool dramaticLight;
+    private bool boxGeometryWide;
+    private bool boxGeometryTall;
+    private bool boxMaterialWarm;
+    private bool boxOutlineOn = true;
+    private bool sphereGeometryLarge;
+    private bool sphereMaterialCool;
 }

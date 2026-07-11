@@ -1,4 +1,7 @@
 namespace BlazorThree.Geometries;
+/// <summary>
+/// Represents polyhedron geometry definition.
+/// </summary>
 
 internal sealed class PolyhedronGeometryDefinition : GeometryDefinition
 {
@@ -6,6 +9,9 @@ internal sealed class PolyhedronGeometryDefinition : GeometryDefinition
     {
         Kind = "polyhedron";
     }
+    /// <summary>
+    /// Gets or sets the vertices.
+    /// </summary>
 
     // Flattened Vector3 list: [x0, y0, z0, x1, y1, z1, ...]
     public double[] Vertices { get; init; } = [
@@ -22,6 +28,9 @@ internal sealed class PolyhedronGeometryDefinition : GeometryDefinition
         -1,
         -1
     ];
+    /// <summary>
+    /// Gets or sets the indices.
+    /// </summary>
 
     // Triangle index list grouped by 3.
     public int[] Indices { get; init; } = [
@@ -38,8 +47,14 @@ internal sealed class PolyhedronGeometryDefinition : GeometryDefinition
         3,
         1
     ];
+    /// <summary>
+    /// Gets or sets the radius.
+    /// </summary>
 
     public double Radius { get; init; } = 1;
+    /// <summary>
+    /// Gets or sets the detail.
+    /// </summary>
 
     public int Detail { get; init; }
 }

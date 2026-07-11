@@ -7,23 +7,42 @@ namespace BlazorThree.Materials;
 /// <summary>
 /// Publishes Phong material settings to the containing mesh.
 /// </summary>
-public class MeshPhongMaterial : ComponentBase
+public class MeshPhongMaterial : TransitionScopedComponentBase
 {
-    [CascadingParameter]
-    private MeshContext? MeshContext { get; set; }
+    /// <summary>
+    /// Gets or sets the color.
+    /// </summary>
+    
 
+    [Animatable]
     [Parameter]
     public string Color { get; set; } = "#00a2ff";
+    /// <summary>
+    /// Gets or sets the emissive.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public string Emissive { get; set; } = "#000000";
+    /// <summary>
+    /// Gets or sets the specular.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public string Specular { get; set; } = "#111111";
+    /// <summary>
+    /// Gets or sets the shininess.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public double Shininess { get; set; } = 30;
+    /// <summary>
+    /// Gets or sets the texture url.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public string? TextureUrl { get; set; }
 
@@ -39,4 +58,4 @@ public class MeshPhongMaterial : ComponentBase
         });
     }
 }
-#pragma warning restore CS1591
+

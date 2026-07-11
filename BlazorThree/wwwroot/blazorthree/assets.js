@@ -1,5 +1,159 @@
 import * as THREE from "https://esm.sh/three@0.178.0";
-import { readVector3, signature, value } from "./shared.js";
+import { ease, readVector3, signature, value } from "./shared.js";
+
+function parseColor(colorValue) {
+    if (typeof colorValue !== "string") {
+        return null;
+    }
+
+    const normalized = colorValue.trim();
+    if (!normalized) {
+        return null;
+    }
+
+    const parsed = new THREE.Color();
+    try {
+        parsed.set(normalized);
+        return parsed;
+    } catch {
+        return null;
+    }
+}
+
+function buildTransitionMap(stateObject) {
+    const map = new Map();
+    const transitions = value(stateObject, "transitions", "Transitions", []);
+
+    for (const transition of transitions) {
+        const property = value(transition, "property", "Property", null);
+        if (!property) {
+            continue;
+        }
+
+        const key = String(property).trim().toLowerCase();
+        if (key.length > 0) {
+            map.set(key, transition);
+        }
+    }
+
+    return map;
+}
+
+function interpolateValue(from, to, t) {
+    if (typeof from === "number" && typeof to === "number") {
+        return from + (to - from) * t;
+    }
+
+    const fromColor = parseColor(from);
+    const toColor = parseColor(to);
+    if (fromColor && toColor) {
+        return `#${fromColor.clone().lerp(toColor, t).getHexString()}`;
+    }
+
+    if (
+        from
+        && to
+        && typeof from === "object"
+        && typeof to === "object"
+        && typeof from.x === "number"
+        && typeof from.y === "number"
+        && typeof from.z === "number"
+        && typeof to.x === "number"
+        && typeof to.y === "number"
+        && typeof to.z === "number"
+    ) {
+        return {
+            x: from.x + (to.x - from.x) * t,
+            y: from.y + (to.y - from.y) * t,
+            z: from.z + (to.z - from.z) * t
+        };
+    }
+
+    return t >= 1 ? to : from;
+}
+
+function buildChannel(path, transition, from, to) {
+    const duration = Number(value(transition, "durationMs", "DurationMs", 650));
+    if (!Number.isFinite(duration) || duration <= 0) {
+        return null;
+    }
+
+    if (signature(from) === signature(to)) {
+        return null;
+    }
+
+    return {
+        path,
+        from,
+        to,
+        start: performance.now(),
+        duration,
+        easing: value(transition, "easing", "Easing", "easeInOutQuad")
+    };
+}
+
+function updateCameraFromChannels(state, timestamp) {
+    if (!state.cameraChannels.length) {
+        return;
+    }
+
+    const activeChannels = [];
+    for (const channel of state.cameraChannels) {
+        const raw = Math.min(1, Math.max(0, (timestamp - channel.start) / Math.max(1, channel.duration)));
+        const t = ease(raw, channel.easing || "linear");
+        const nextValue = interpolateValue(channel.from, channel.to, t);
+
+        if (channel.path === "fov") {
+            state.camera.fov = nextValue;
+        } else if (channel.path === "position") {
+            state.camera.position.set(nextValue.x, nextValue.y, nextValue.z);
+        } else if (channel.path === "rotation") {
+            state.camera.rotation.set(nextValue.x, nextValue.y, nextValue.z);
+        }
+
+        if (raw < 1) {
+            activeChannels.push(channel);
+        }
+    }
+
+    state.cameraChannels = activeChannels;
+    state.camera.updateProjectionMatrix();
+}
+
+function updateLightFromChannels(state, timestamp) {
+    if (!state.lightChannels.length || !state.light) {
+        return;
+    }
+
+    const activeChannels = [];
+    for (const channel of state.lightChannels) {
+        const raw = Math.min(1, Math.max(0, (timestamp - channel.start) / Math.max(1, channel.duration)));
+        const t = ease(raw, channel.easing || "linear");
+        const nextValue = interpolateValue(channel.from, channel.to, t);
+
+        if (channel.path === "intensity" && state.light.intensity !== undefined) {
+            state.light.intensity = nextValue;
+        } else if (channel.path === "color" && state.light.color) {
+            state.light.color.set(nextValue);
+        } else if (channel.path === "position" && state.light.position) {
+            state.light.position.set(nextValue.x, nextValue.y, nextValue.z);
+        }
+
+        if (raw < 1) {
+            activeChannels.push(channel);
+        }
+    }
+
+    state.lightChannels = activeChannels;
+}
+
+export function updateCameraAnimation(state, timestamp) {
+    updateCameraFromChannels(state, timestamp);
+}
+
+export function updateLightAnimation(state, timestamp) {
+    updateLightFromChannels(state, timestamp);
+}
 
 function readVector2Array(rawPoints, fallback) {
     const points = Array.isArray(rawPoints) ? rawPoints : fallback;
@@ -417,9 +571,58 @@ export function ensureCamera(state, cameraState) {
     const width = state.hostElement.clientWidth || 1;
     const height = state.hostElement.clientHeight || 1;
     const position = readVector3(cameraState, "position", "Position", { x: 0, y: 1, z: 5 });
-    state.camera.fov = value(cameraState, "fov", "Fov", 75);
+    const rotation = readVector3(cameraState, "rotation", "Rotation", { x: 0, y: 0, z: 0 });
+    const target = {
+        fov: value(cameraState, "fov", "Fov", 75),
+        position,
+        rotation
+    };
+
+    const transitions = buildTransitionMap(cameraState);
+    const channels = [];
+
+    const fovTransition = transitions.get("fov");
+    if (fovTransition) {
+        const channel = buildChannel("fov", fovTransition, state.camera.fov, target.fov);
+        if (channel) {
+            channels.push(channel);
+        }
+    } else {
+        state.camera.fov = target.fov;
+    }
+
+    const positionTransition = transitions.get("position");
+    if (positionTransition) {
+        const channel = buildChannel(
+            "position",
+            positionTransition,
+            { x: state.camera.position.x, y: state.camera.position.y, z: state.camera.position.z },
+            target.position
+        );
+        if (channel) {
+            channels.push(channel);
+        }
+    } else {
+        state.camera.position.set(target.position.x, target.position.y, target.position.z);
+    }
+
+    const rotationTransition = transitions.get("rotation");
+    if (rotationTransition) {
+        const channel = buildChannel(
+            "rotation",
+            rotationTransition,
+            { x: state.camera.rotation.x, y: state.camera.rotation.y, z: state.camera.rotation.z },
+            target.rotation
+        );
+        if (channel) {
+            channels.push(channel);
+        }
+    } else {
+        state.camera.rotation.set(target.rotation.x, target.rotation.y, target.rotation.z);
+    }
+
+    state.cameraChannels = channels;
     state.camera.aspect = width / height;
-    state.camera.position.set(position.x, position.y, position.z);
 
     state.camera.updateProjectionMatrix();
     state.cameraSignature = cameraSignature;
@@ -436,6 +639,7 @@ export function ensureLight(state, lightState) {
 
         state.light = buildLight(lightState);
         state.lightKind = type;
+        state.lightChannels = [];
         state.scene.add(state.light);
         state.lightSignature = signature(lightState);
         return;
@@ -446,18 +650,49 @@ export function ensureLight(state, lightState) {
         return;
     }
 
-    if (state.light.color) {
-        state.light.color.set(value(lightState, "color", "Color", "#ffffff"));
+    const transitions = buildTransitionMap(lightState);
+    const channels = [];
+
+    const color = value(lightState, "color", "Color", "#ffffff");
+    const intensity = value(lightState, "intensity", "Intensity", 1);
+    const position = readVector3(lightState, "position", "Position", { x: 4, y: 6, z: 8 });
+
+    const colorTransition = transitions.get("color");
+    if (colorTransition) {
+        const channel = buildChannel("color", colorTransition, `#${state.light.color.getHexString()}`, color);
+        if (channel) {
+            channels.push(channel);
+        }
+    } else if (state.light.color) {
+        state.light.color.set(color);
     }
 
-    if (state.light.intensity !== undefined) {
-        state.light.intensity = value(lightState, "intensity", "Intensity", 1);
+    const intensityTransition = transitions.get("intensity");
+    if (intensityTransition) {
+        const channel = buildChannel("intensity", intensityTransition, state.light.intensity, intensity);
+        if (channel) {
+            channels.push(channel);
+        }
+    } else if (state.light.intensity !== undefined) {
+        state.light.intensity = intensity;
     }
 
-    if (state.light.position) {
-        const position = readVector3(lightState, "position", "Position", { x: 4, y: 6, z: 8 });
+    const positionTransition = transitions.get("position");
+    if (positionTransition) {
+        const channel = buildChannel(
+            "position",
+            positionTransition,
+            { x: state.light.position.x, y: state.light.position.y, z: state.light.position.z },
+            position
+        );
+        if (channel) {
+            channels.push(channel);
+        }
+    } else if (state.light.position) {
         state.light.position.set(position.x, position.y, position.z);
     }
+
+    state.lightChannels = channels;
 
     state.lightSignature = lightSignature;
 }

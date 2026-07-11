@@ -96,9 +96,13 @@ public class Model : Object3d, IDisposable
         builder.AddAttribute(1, nameof(CascadingValue<ModelContext>.Value), modelContext);
         builder.AddAttribute(2, nameof(CascadingValue<ModelContext>.ChildContent), (RenderFragment)(childBuilder =>
         {
-            childBuilder.OpenComponent<CascadingValue<TransitionHostContext>>(0);
-            childBuilder.AddAttribute(1, nameof(CascadingValue<TransitionHostContext>.Value), transitionHostContext);
-            childBuilder.AddAttribute(2, nameof(CascadingValue<TransitionHostContext>.ChildContent), ChildContent);
+            childBuilder.OpenComponent<CascadingValue<TransitionScopeContext>>(0);
+            childBuilder.AddAttribute(1, nameof(CascadingValue<TransitionScopeContext>.Value), new TransitionScopeContext
+            {
+                Host = transitionHostContext,
+                AllowedPropertyRoots = AnimatablePropertyRegistry.GetAnimatablePropertyRoots(typeof(Model))
+            });
+            childBuilder.AddAttribute(2, nameof(CascadingValue<TransitionScopeContext>.ChildContent), ChildContent);
             childBuilder.CloseComponent();
         }));
         builder.CloseComponent();

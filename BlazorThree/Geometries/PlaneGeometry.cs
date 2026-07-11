@@ -7,20 +7,35 @@ namespace BlazorThree.Geometries;
 /// <summary>
 /// Publishes plane geometry settings to the containing mesh.
 /// </summary>
-public class PlaneGeometry : ComponentBase
+public class PlaneGeometry : TransitionScopedComponentBase
 {
-    [CascadingParameter]
-    private MeshContext? MeshContext { get; set; }
+    /// <summary>
+    /// Gets or sets the width.
+    /// </summary>
+    
 
+    [Animatable]
     [Parameter]
     public double Width { get; set; } = 1;
+    /// <summary>
+    /// Gets or sets the height.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public double Height { get; set; } = 1;
+    /// <summary>
+    /// Gets or sets the width segments.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public int WidthSegments { get; set; } = 1;
+    /// <summary>
+    /// Gets or sets the height segments.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public int HeightSegments { get; set; } = 1;
 
@@ -35,4 +50,4 @@ public class PlaneGeometry : ComponentBase
         });
     }
 }
-#pragma warning restore CS1591
+

@@ -14,6 +14,9 @@ public class TimelineTrack : ComponentBase, IDisposable
     private readonly Dictionary<string, TimelineKeyframeState> keyframes = new(StringComparer.Ordinal);
 
     private readonly TimelineTrackContext timelineTrackContext = new();
+    /// <summary>
+    /// Gets or sets the timeline context.
+    /// </summary>
 
     [CascadingParameter]
     private TimelineContext? TimelineContext { get; set; }

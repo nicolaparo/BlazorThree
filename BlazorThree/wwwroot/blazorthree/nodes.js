@@ -3,7 +3,7 @@ import { ColladaLoader } from "https://esm.sh/three@0.178.0/examples/jsm/loaders
 import { FBXLoader } from "https://esm.sh/three@0.178.0/examples/jsm/loaders/FBXLoader";
 import { GLTFLoader } from "https://esm.sh/three@0.178.0/examples/jsm/loaders/GLTFLoader";
 import { buildGeometry, buildMaterial } from "./assets.js";
-import { mergeTransform, readBaseTransform, readVector3, signature, value } from "./shared.js";
+import { ease, mergeTransform, readBaseTransform, readVector3, signature, value } from "./shared.js";
 import { applyRecordTarget } from "./timeline.js";
 
 function getParentObject(state, parentId) {
@@ -19,6 +19,470 @@ function attachToParent(parentObject, object3D) {
     if (object3D.parent !== parentObject) {
         parentObject.add(object3D);
     }
+}
+
+function deepClone(valueToClone) {
+    if (valueToClone === undefined) {
+        return undefined;
+    }
+
+    if (valueToClone === null) {
+        return null;
+    }
+
+    if (typeof structuredClone === "function") {
+        return structuredClone(valueToClone);
+    }
+
+    return JSON.parse(JSON.stringify(valueToClone));
+}
+
+function parseColor(colorValue) {
+    if (typeof colorValue !== "string") {
+        return null;
+    }
+
+    const normalized = colorValue.trim();
+    if (!normalized) {
+        return null;
+    }
+
+    const parsed = new THREE.Color();
+    try {
+        parsed.set(normalized);
+        return parsed;
+    } catch {
+        return null;
+    }
+}
+
+function buildTransitionEntries(transitionMap, prefix) {
+    const entries = [];
+    const normalizedPrefix = `${prefix}.`;
+
+    for (const [key, transition] of transitionMap.entries()) {
+        if (!key.startsWith(normalizedPrefix) || key.length <= normalizedPrefix.length) {
+            continue;
+        }
+
+        entries.push({
+            transition,
+            path: key.slice(normalizedPrefix.length).split(".")
+        });
+    }
+
+    return entries;
+}
+
+function readAtPath(source, path) {
+    let current = source;
+    for (const segment of path) {
+        if (current == null || typeof current !== "object") {
+            return undefined;
+        }
+
+        const pascal = segment.length > 0
+            ? segment.charAt(0).toUpperCase() + segment.slice(1)
+            : segment;
+
+        current = value(current, segment, pascal, undefined);
+    }
+
+    return current;
+}
+
+function writeAtPath(target, path, nextValue) {
+    if (target == null || typeof target !== "object") {
+        return;
+    }
+
+    let current = target;
+    for (let index = 0; index < path.length - 1; index += 1) {
+        const segment = path[index];
+        const valueAtSegment = current[segment];
+        if (valueAtSegment == null || typeof valueAtSegment !== "object") {
+            current[segment] = {};
+        }
+
+        current = current[segment];
+    }
+
+    current[path[path.length - 1]] = nextValue;
+}
+
+function interpolateStateValue(from, to, t) {
+    if (typeof from === "number" && typeof to === "number") {
+        return from + (to - from) * t;
+    }
+
+    if (typeof from === "boolean" && typeof to === "boolean") {
+        return t >= 1 ? to : from;
+    }
+
+    const fromColor = parseColor(from);
+    const toColor = parseColor(to);
+    if (fromColor && toColor) {
+        const mixed = fromColor.clone().lerp(toColor, t);
+        return `#${mixed.getHexString()}`;
+    }
+
+    if (from && to && typeof from === "object" && typeof to === "object") {
+        if (
+            typeof from.x === "number"
+            && typeof from.y === "number"
+            && typeof from.z === "number"
+            && typeof to.x === "number"
+            && typeof to.y === "number"
+            && typeof to.z === "number"
+        ) {
+            return {
+                x: from.x + (to.x - from.x) * t,
+                y: from.y + (to.y - from.y) * t,
+                z: from.z + (to.z - from.z) * t
+            };
+        }
+    }
+
+    return t >= 1 ? deepClone(to) : deepClone(from);
+}
+
+function buildStateAnimationChannels(currentState, targetState, transitionEntries) {
+    const channels = [];
+
+    for (const entry of transitionEntries) {
+        const transition = entry.transition;
+        const duration = Number(value(transition, "durationMs", "DurationMs", 650));
+        if (!Number.isFinite(duration) || duration <= 0) {
+            continue;
+        }
+
+        const fromValue = readAtPath(currentState, entry.path);
+        const toValue = readAtPath(targetState, entry.path);
+        if (signature(fromValue) === signature(toValue)) {
+            continue;
+        }
+
+        channels.push({
+            path: entry.path,
+            from: deepClone(fromValue),
+            to: deepClone(toValue),
+            start: performance.now(),
+            duration,
+            easing: value(transition, "easing", "Easing", "easeInOutQuad")
+        });
+    }
+
+    return channels;
+}
+
+function evaluateAnimatedState(targetState, channels, timestamp) {
+    if (!channels.length) {
+        return {
+            state: deepClone(targetState),
+            hasActiveChannels: false
+        };
+    }
+
+    const nextState = deepClone(targetState);
+    let hasActiveChannels = false;
+
+    for (const channel of channels) {
+        const elapsed = timestamp - channel.start;
+        const raw = Math.min(1, Math.max(0, elapsed / Math.max(1, channel.duration)));
+        const interpolationFactor = ease(raw, channel.easing || "linear");
+
+        writeAtPath(nextState, channel.path, interpolateStateValue(channel.from, channel.to, interpolationFactor));
+
+        if (raw < 1) {
+            hasActiveChannels = true;
+        }
+    }
+
+    return {
+        state: nextState,
+        hasActiveChannels
+    };
+}
+
+function applyMeshVisualStates(state, record, geometryState, materialState, outlineState) {
+    const nextGeometrySignature = signature(geometryState);
+    if (record.geometrySignature !== nextGeometrySignature) {
+        const geometryUpdatedInPlace = applyGeometryStateInPlace(record, geometryState);
+        if (!geometryUpdatedInPlace) {
+            const geometry = buildGeometry({ geometry: geometryState });
+            record.mesh.geometry.dispose();
+            record.mesh.geometry = geometry;
+            record.geometryMorph = null;
+        }
+
+        record.geometrySignature = nextGeometrySignature;
+    }
+
+    const nextMaterialSignature = signature(materialState);
+    if (record.materialSignature !== nextMaterialSignature) {
+        const materialUpdatedInPlace = applyMaterialStateInPlace(record, materialState);
+        if (!materialUpdatedInPlace) {
+            const material = buildMaterial(state, { material: materialState });
+            record.mesh.material.dispose();
+            record.mesh.material = material;
+        }
+
+        record.materialSignature = nextMaterialSignature;
+    }
+
+    const nextOutlineSignature = signature(outlineState);
+    if (record.outlineSignature !== nextOutlineSignature) {
+        const outlineUpdatedInPlace = applyOutlineStateInPlace(record, outlineState);
+        if (!outlineUpdatedInPlace) {
+            applyOutline(record, outlineState);
+        }
+
+        record.outlineSignature = nextOutlineSignature;
+    }
+}
+
+function getTransitionLeafKeys(entries) {
+    return entries.map(entry => entry.path.join("."));
+}
+
+function canUseInPlaceGeometryMorph(geometryState, transitionEntries) {
+    if (!geometryState || transitionEntries.length === 0) {
+        return false;
+    }
+
+    const kind = String(value(geometryState, "kind", "Kind", "")).toLowerCase();
+    const keys = getTransitionLeafKeys(transitionEntries);
+
+    if (kind === "box") {
+        return keys.every(key => key === "width" || key === "height" || key === "depth");
+    }
+
+    if (kind === "sphere") {
+        return keys.every(key => key === "radius");
+    }
+
+    return false;
+}
+
+function setupGeometryMorph(record, baseGeometryState, transitionEntries) {
+    if (!canUseInPlaceGeometryMorph(baseGeometryState, transitionEntries)) {
+        record.geometryMorph = null;
+        return;
+    }
+
+    const position = record.mesh.geometry?.getAttribute?.("position");
+    if (!position || !position.array) {
+        record.geometryMorph = null;
+        return;
+    }
+
+    const kind = String(value(baseGeometryState, "kind", "Kind", "")).toLowerCase();
+
+    record.geometryMorph = {
+        kind,
+        baseState: deepClone(baseGeometryState),
+        basePositions: Float32Array.from(position.array)
+    };
+}
+
+function applyGeometryStateInPlace(record, geometryState) {
+    const morph = record.geometryMorph;
+    if (!morph || !geometryState) {
+        return false;
+    }
+
+    const position = record.mesh.geometry?.getAttribute?.("position");
+    if (!position || !position.array || position.array.length !== morph.basePositions.length) {
+        return false;
+    }
+
+    if (String(value(geometryState, "kind", "Kind", "")).toLowerCase() !== morph.kind) {
+        return false;
+    }
+
+    const out = position.array;
+    const src = morph.basePositions;
+
+    if (morph.kind === "box") {
+        const baseWidth = Number(value(morph.baseState, "width", "Width", 1)) || 1;
+        const baseHeight = Number(value(morph.baseState, "height", "Height", 1)) || 1;
+        const baseDepth = Number(value(morph.baseState, "depth", "Depth", 1)) || 1;
+
+        const width = Number(value(geometryState, "width", "Width", baseWidth));
+        const height = Number(value(geometryState, "height", "Height", baseHeight));
+        const depth = Number(value(geometryState, "depth", "Depth", baseDepth));
+
+        const sx = width / baseWidth;
+        const sy = height / baseHeight;
+        const sz = depth / baseDepth;
+
+        for (let index = 0; index < out.length; index += 3) {
+            out[index] = src[index] * sx;
+            out[index + 1] = src[index + 1] * sy;
+            out[index + 2] = src[index + 2] * sz;
+        }
+    } else if (morph.kind === "sphere") {
+        const baseRadius = Number(value(morph.baseState, "radius", "Radius", 0.5)) || 0.5;
+        const radius = Number(value(geometryState, "radius", "Radius", baseRadius));
+        const scale = radius / baseRadius;
+
+        for (let index = 0; index < out.length; index += 1) {
+            out[index] = src[index] * scale;
+        }
+    } else {
+        return false;
+    }
+
+    position.needsUpdate = true;
+    record.mesh.geometry.computeBoundingBox();
+    record.mesh.geometry.computeBoundingSphere();
+    return true;
+}
+
+function applyMaterialStateInPlace(record, materialState) {
+    const material = record.mesh.material;
+    if (!material || !materialState || Array.isArray(material)) {
+        return false;
+    }
+
+    const kind = value(materialState, "kind", "Kind", null);
+    const previous = record.renderMaterialState ?? null;
+    if (!kind || !previous || value(previous, "kind", "Kind", null) !== kind) {
+        return false;
+    }
+
+    const textureKeys = ["textureUrl", "gradientMapUrl", "matcapUrl"];
+    for (const key of textureKeys) {
+        const currentTexture = value(materialState, key, key.charAt(0).toUpperCase() + key.slice(1), null);
+        const previousTexture = value(previous, key, key.charAt(0).toUpperCase() + key.slice(1), null);
+        if (currentTexture !== previousTexture) {
+            return false;
+        }
+    }
+
+    const candidateKeys = [
+        "color",
+        "emissive",
+        "specular",
+        "metalness",
+        "roughness",
+        "clearcoat",
+        "clearcoatRoughness",
+        "transmission",
+        "ior",
+        "reflectivity",
+        "shininess",
+        "wireframe",
+        "flatShading"
+    ];
+
+    for (const key of candidateKeys) {
+        const pascal = key.charAt(0).toUpperCase() + key.slice(1);
+        const raw = value(materialState, key, pascal, undefined);
+        if (raw === undefined) {
+            continue;
+        }
+
+        const target = material[key];
+        if (target?.isColor && typeof raw === "string") {
+            target.set(raw);
+            continue;
+        }
+
+        if (typeof target === "number" && typeof raw === "number") {
+            material[key] = raw;
+            continue;
+        }
+
+        if (typeof target === "boolean" && typeof raw === "boolean") {
+            material[key] = raw;
+            material.needsUpdate = true;
+        }
+    }
+
+    return true;
+}
+
+function applyOutlineStateInPlace(record, outlineState) {
+    if (!record.outline || !outlineState) {
+        return false;
+    }
+
+    const outlineMaterial = record.outline.material;
+    if (!outlineMaterial || !outlineMaterial.isLineBasicMaterial) {
+        return false;
+    }
+
+    const color = value(outlineState, "color", "Color", null);
+    if (color && outlineMaterial.color) {
+        outlineMaterial.color.set(color);
+    }
+
+    const opacity = Number(value(outlineState, "opacity", "Opacity", 1));
+    outlineMaterial.opacity = opacity;
+    outlineMaterial.transparent = opacity < 1;
+    outlineMaterial.needsUpdate = true;
+
+    return true;
+}
+
+function applyMeshStyleTargets(state, record, meshState) {
+    const geometryState = value(meshState, "geometry", "Geometry", null);
+    const materialState = value(meshState, "material", "Material", null);
+    const outlineState = value(meshState, "outline", "Outline", null);
+
+    if (!record.renderGeometryState) {
+        record.targetGeometryState = deepClone(geometryState);
+        record.targetMaterialState = deepClone(materialState);
+        record.targetOutlineState = deepClone(outlineState);
+        record.geometryChannels = [];
+        record.materialChannels = [];
+        record.outlineChannels = [];
+
+        // First sync must rebuild from full state so texture maps are created from TextureUrl.
+        applyMeshVisualStates(state, record, record.targetGeometryState, record.targetMaterialState, record.targetOutlineState);
+
+        record.renderGeometryState = deepClone(record.targetGeometryState);
+        record.renderMaterialState = deepClone(record.targetMaterialState);
+        record.renderOutlineState = deepClone(record.targetOutlineState);
+        return;
+    }
+
+    record.targetGeometryState = deepClone(geometryState);
+    record.targetMaterialState = deepClone(materialState);
+    record.targetOutlineState = deepClone(outlineState);
+
+    const geometryTransitions = buildTransitionEntries(record.transitionMap, "geometry");
+    const materialTransitions = buildTransitionEntries(record.transitionMap, "material");
+    const outlineTransitions = buildTransitionEntries(record.transitionMap, "outline");
+
+    setupGeometryMorph(record, record.renderGeometryState, geometryTransitions);
+
+    record.geometryChannels = buildStateAnimationChannels(record.renderGeometryState, record.targetGeometryState, geometryTransitions);
+    record.materialChannels = buildStateAnimationChannels(record.renderMaterialState, record.targetMaterialState, materialTransitions);
+    record.outlineChannels = buildStateAnimationChannels(record.renderOutlineState, record.targetOutlineState, outlineTransitions);
+
+    updateMeshStyleAnimation(state, record, performance.now());
+}
+
+export function updateMeshStyleAnimation(state, record, timestamp) {
+    if (!record.targetGeometryState || !record.targetMaterialState) {
+        return;
+    }
+
+    const geometryEval = evaluateAnimatedState(record.targetGeometryState, record.geometryChannels, timestamp);
+    const materialEval = evaluateAnimatedState(record.targetMaterialState, record.materialChannels, timestamp);
+    const outlineEval = evaluateAnimatedState(record.targetOutlineState, record.outlineChannels, timestamp);
+
+    record.renderGeometryState = geometryEval.state;
+    record.renderMaterialState = materialEval.state;
+    record.renderOutlineState = outlineEval.state;
+
+    applyMeshVisualStates(state, record, record.renderGeometryState, record.renderMaterialState, record.renderOutlineState);
+
+    record.geometryChannels = geometryEval.hasActiveChannels ? record.geometryChannels : [];
+    record.materialChannels = materialEval.hasActiveChannels ? record.materialChannels : [];
+    record.outlineChannels = outlineEval.hasActiveChannels ? record.outlineChannels : [];
 }
 
 function disposeOutline(record) {
@@ -373,10 +837,9 @@ export function updateModelPlayback(record, timestamp) {
     }
 }
 
-function applyOutline(record, meshState) {
+function applyOutline(record, outlineState) {
     disposeOutline(record);
 
-    const outlineState = value(meshState, "outline", "Outline", null);
     if (!outlineState) {
         return;
     }
@@ -439,7 +902,7 @@ function buildNodeTransitionMap(nodeState) {
         }
 
         const key = String(property).trim().toLowerCase();
-        if (key === "position" || key === "rotation" || key === "scale") {
+        if (key.length > 0) {
             map.set(key, transition);
         }
     }
@@ -516,37 +979,12 @@ export function syncMeshes(state, meshes, timelineMap) {
         const parentId = value(meshState, "parentId", "ParentId", null);
         attachToParent(getParentObject(state, parentId), record.mesh);
 
-        const geometryState = value(meshState, "geometry", "Geometry", null);
-        const materialState = value(meshState, "material", "Material", null);
-        const outlineState = value(meshState, "outline", "Outline", null);
-
-        const nextGeometrySignature = signature(geometryState);
-        if (record.geometrySignature !== nextGeometrySignature) {
-            const geometry = buildGeometry(meshState);
-            record.mesh.geometry.dispose();
-            record.mesh.geometry = geometry;
-            record.geometrySignature = nextGeometrySignature;
-        }
-
-        const nextMaterialSignature = signature(materialState);
-        if (record.materialSignature !== nextMaterialSignature) {
-            const material = buildMaterial(state, meshState);
-            record.mesh.material.dispose();
-            record.mesh.material = material;
-            record.materialSignature = nextMaterialSignature;
-        }
-
-        const nextOutlineSignature = signature(outlineState);
-        if (record.outlineSignature !== nextOutlineSignature) {
-            applyOutline(record, meshState);
-            record.outlineSignature = nextOutlineSignature;
-        }
-
         const className = value(meshState, "className", "ClassName", null);
         record.className = className;
         const baseTransform = readBaseTransform(meshState);
         record.baseTransform = baseTransform;
         record.transitionMap = buildNodeTransitionMap(meshState);
+        applyMeshStyleTargets(state, record, meshState);
         const timelineTransform = className ? timelineMap.get(className) : null;
         const targetTransform = mergeTransform(baseTransform, timelineTransform);
         applyRecordTarget(record, targetTransform, timelineTransform);

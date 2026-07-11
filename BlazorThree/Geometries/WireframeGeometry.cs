@@ -7,17 +7,28 @@ namespace BlazorThree.Geometries;
 /// <summary>
 /// Publishes wireframe geometry settings to the containing mesh.
 /// </summary>
-public class WireframeGeometry : ComponentBase
+public class WireframeGeometry : TransitionScopedComponentBase
 {
-    [CascadingParameter]
-    private MeshContext? MeshContext { get; set; }
+    /// <summary>
+    /// Gets or sets the source width.
+    /// </summary>
+    
 
+    [Animatable]
     [Parameter]
     public double SourceWidth { get; set; } = 1;
+    /// <summary>
+    /// Gets or sets the source height.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public double SourceHeight { get; set; } = 1;
+    /// <summary>
+    /// Gets or sets the source depth.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public double SourceDepth { get; set; } = 1;
 
@@ -34,4 +45,4 @@ public class WireframeGeometry : ComponentBase
         });
     }
 }
-#pragma warning restore CS1591
+

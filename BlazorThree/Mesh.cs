@@ -46,9 +46,13 @@ public class Mesh : Object3d, IDisposable
         builder.AddAttribute(1, nameof(CascadingValue<MeshContext>.Value), meshContext);
         builder.AddAttribute(2, nameof(CascadingValue<MeshContext>.ChildContent), (RenderFragment)(childBuilder =>
         {
-            childBuilder.OpenComponent<CascadingValue<TransitionHostContext>>(0);
-            childBuilder.AddAttribute(1, nameof(CascadingValue<TransitionHostContext>.Value), transitionHostContext);
-            childBuilder.AddAttribute(2, nameof(CascadingValue<TransitionHostContext>.ChildContent), ChildContent);
+            childBuilder.OpenComponent<CascadingValue<TransitionScopeContext>>(0);
+            childBuilder.AddAttribute(1, nameof(CascadingValue<TransitionScopeContext>.Value), new TransitionScopeContext
+            {
+                Host = transitionHostContext,
+                AllowedPropertyRoots = AnimatablePropertyRegistry.GetAnimatablePropertyRoots(typeof(Mesh))
+            });
+            childBuilder.AddAttribute(2, nameof(CascadingValue<TransitionScopeContext>.ChildContent), ChildContent);
             childBuilder.CloseComponent();
         }));
         builder.CloseComponent();

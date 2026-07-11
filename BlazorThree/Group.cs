@@ -38,9 +38,13 @@ public class Group : Object3d, IDisposable
         builder.AddAttribute(1, nameof(CascadingValue<NodeContainerContext>.Value), childContainer);
         builder.AddAttribute(2, nameof(CascadingValue<NodeContainerContext>.ChildContent), (RenderFragment)(childBuilder =>
         {
-            childBuilder.OpenComponent<CascadingValue<TransitionHostContext>>(0);
-            childBuilder.AddAttribute(1, nameof(CascadingValue<TransitionHostContext>.Value), transitionHostContext);
-            childBuilder.AddAttribute(2, nameof(CascadingValue<TransitionHostContext>.ChildContent), ChildContent);
+            childBuilder.OpenComponent<CascadingValue<TransitionScopeContext>>(0);
+            childBuilder.AddAttribute(1, nameof(CascadingValue<TransitionScopeContext>.Value), new TransitionScopeContext
+            {
+                Host = transitionHostContext,
+                AllowedPropertyRoots = AnimatablePropertyRegistry.GetAnimatablePropertyRoots(typeof(Group))
+            });
+            childBuilder.AddAttribute(2, nameof(CascadingValue<TransitionScopeContext>.ChildContent), ChildContent);
             childBuilder.CloseComponent();
         }));
         builder.CloseComponent();

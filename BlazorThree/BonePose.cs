@@ -10,6 +10,9 @@ namespace BlazorThree;
 public class BonePose : ComponentBase, IDisposable, IPositionable, IRotatable, IScalable
 {
     private readonly string id = Guid.NewGuid().ToString("N");
+    /// <summary>
+    /// Gets or sets the model context.
+    /// </summary>
 
     [CascadingParameter]
     private ModelContext? ModelContext { get; set; }

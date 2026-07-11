@@ -1,7 +1,7 @@
 import * as THREE from "https://esm.sh/three@0.178.0";
 import { OrbitControls } from "https://esm.sh/three@0.178.0/examples/jsm/controls/OrbitControls";
-import { buildCamera, ensureCamera, ensureLight } from "./blazorthree/assets.js";
-import { clearSceneNodes, disposeGroupRecord, disposeMeshRecord, disposeModelRecord, syncGroups, syncMeshes, syncModels, updateModelPlayback } from "./blazorthree/nodes.js";
+import { buildCamera, ensureCamera, ensureLight, updateCameraAnimation, updateLightAnimation } from "./blazorthree/assets.js";
+import { clearSceneNodes, disposeGroupRecord, disposeMeshRecord, disposeModelRecord, syncGroups, syncMeshes, syncModels, updateMeshStyleAnimation, updateModelPlayback } from "./blazorthree/nodes.js";
 import { now, value } from "./blazorthree/shared.js";
 import { applyLiveTimeline, buildTimelineMap, updateRecordAnimation } from "./blazorthree/timeline.js";
 
@@ -233,8 +233,10 @@ export function initScene(hostElement, options, dotNetRef) {
         timelines: [],
         timelinePlayback: new Map(),
         cameraSignature: "",
+        cameraChannels: [],
         lightSignature: "",
         lightKind: null,
+        lightChannels: [],
         frameHandle: 0,
         resizeObserver: null,
         dotNetRef,
@@ -257,11 +259,15 @@ export function initScene(hostElement, options, dotNetRef) {
         const timelineMap = buildTimelineMap(state.timelines, state.timelinePlayback, timestamp);
         applyLiveTimeline(state, timelineMap);
 
+        updateCameraAnimation(state, timestamp);
+        updateLightAnimation(state, timestamp);
+
         for (const record of state.groups.values()) {
             updateRecordAnimation(record, timestamp);
         }
 
         for (const record of state.meshes.values()) {
+            updateMeshStyleAnimation(state, record, timestamp);
             updateRecordAnimation(record, timestamp);
         }
 

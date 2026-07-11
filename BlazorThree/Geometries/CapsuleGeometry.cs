@@ -7,20 +7,35 @@ namespace BlazorThree.Geometries;
 /// <summary>
 /// Publishes capsule geometry settings to the containing mesh.
 /// </summary>
-public class CapsuleGeometry : ComponentBase
+public class CapsuleGeometry : TransitionScopedComponentBase
 {
-    [CascadingParameter]
-    private MeshContext? MeshContext { get; set; }
+    /// <summary>
+    /// Gets or sets the radius.
+    /// </summary>
+    
 
+    [Animatable]
     [Parameter]
     public double Radius { get; set; } = 1;
+    /// <summary>
+    /// Gets or sets the length.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public double Length { get; set; } = 1;
+    /// <summary>
+    /// Gets or sets the cap segments.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public int CapSegments { get; set; } = 4;
+    /// <summary>
+    /// Gets or sets the radial segments.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public int RadialSegments { get; set; } = 8;
 
@@ -35,4 +50,4 @@ public class CapsuleGeometry : ComponentBase
         });
     }
 }
-#pragma warning restore CS1591
+

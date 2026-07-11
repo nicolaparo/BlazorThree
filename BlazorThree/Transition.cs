@@ -9,20 +9,23 @@ namespace BlazorThree;
 public class Transition : ComponentBase, IDisposable
 {
     private readonly HashSet<string> previousProperties = new(StringComparer.Ordinal);
+    /// <summary>
+    /// Gets or sets the transition scope context.
+    /// </summary>
 
     [CascadingParameter]
-    private TransitionHostContext? TransitionHostContext { get; set; }
+    private TransitionScopeContext? TransitionScopeContext { get; set; }
 
     /// <summary>
-    /// Gets or sets the transformed property to animate when it changes.
-    /// Supported values are <c>Position</c>, <c>Rotation</c>, and <c>Scale</c>.
+    /// Gets or sets the property path to animate when it changes.
+    /// Examples: <c>Position</c>, <c>material.color</c>, <c>outline.opacity</c>, <c>geometry.width</c>.
     /// </summary>
     [Parameter]
     public string Property { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the transformed properties to animate when they change.
-    /// Supported values are <c>Position</c>, <c>Rotation</c>, and <c>Scale</c>.
+    /// Gets or sets multiple property paths to animate when they change.
+    /// Examples: <c>Position</c>, <c>material.color</c>, <c>outline.opacity</c>, <c>geometry.width</c>.
     /// </summary>
     [Parameter]
     public IReadOnlyList<string>? Properties { get; set; }
@@ -48,12 +51,12 @@ public class Transition : ComponentBase, IDisposable
 
         foreach (var removedProperty in previousProperties.Except(normalizedProperties, StringComparer.Ordinal))
         {
-            TransitionHostContext?.RemoveTransition?.Invoke(removedProperty);
+            TransitionScopeContext?.Host.RemoveTransition?.Invoke(removedProperty);
         }
 
         foreach (var property in normalizedProperties)
         {
-            TransitionHostContext?.UpsertTransition?.Invoke(new TransitionState
+            TransitionScopeContext?.Host.UpsertTransition?.Invoke(new TransitionState
             {
                 Property = property,
                 DurationMs = DurationMs,
@@ -75,7 +78,7 @@ public class Transition : ComponentBase, IDisposable
     {
         foreach (var property in previousProperties)
         {
-            TransitionHostContext?.RemoveTransition?.Invoke(property);
+            TransitionScopeContext?.Host.RemoveTransition?.Invoke(property);
         }
     }
 
@@ -106,19 +109,13 @@ public class Transition : ComponentBase, IDisposable
         return result;
     }
 
-    private static string? NormalizeProperty(string? property)
+    private string? NormalizeProperty(string? property)
     {
-        if (string.IsNullOrWhiteSpace(property))
+        if (TransitionScopeContext is null)
         {
             return null;
         }
 
-        return property.Trim().ToLowerInvariant() switch
-        {
-            "position" => "position",
-            "rotation" => "rotation",
-            "scale" => "scale",
-            _ => null
-        };
+        return TransitionScopeContext.ResolveProperty(property);
     }
 }

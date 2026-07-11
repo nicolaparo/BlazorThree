@@ -6,20 +6,21 @@ namespace BlazorThree;
 /// <summary>
 /// Adds a wire-like edge outline to the containing mesh.
 /// </summary>
-public class Outline : ComponentBase, IDisposable
+public class Outline : TransitionScopedComponentBase, IDisposable
 {
-    [CascadingParameter]
-    private MeshContext? MeshContext { get; set; }
+    /// <inheritdoc />
 
     /// <summary>
     /// Gets or sets the outline color as a CSS-compatible color string.
     /// </summary>
+    [Animatable]
     [Parameter]
     public string Color { get; set; } = "#ffffff";
 
     /// <summary>
     /// Gets or sets the outline opacity.
     /// </summary>
+    [Animatable]
     [Parameter]
     public double Opacity { get; set; } = 1;
 

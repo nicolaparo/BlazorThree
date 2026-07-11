@@ -270,6 +270,12 @@ public partial class Scene
                 ? new
                 {
                     fov = delta.Camera.Fov,
+                    transitions = delta.Camera.Transitions.Select(transition => new
+                    {
+                        property = transition.Property,
+                        durationMs = transition.DurationMs,
+                        easing = transition.Easing
+                    }),
                     position = ToJsVector(delta.Camera.Position),
                     rotation = ToJsVector(delta.Camera.Rotation)
                 }
@@ -281,6 +287,12 @@ public partial class Scene
                     type = delta.Light.Type,
                     color = delta.Light.Color,
                     intensity = delta.Light.Intensity,
+                    transitions = delta.Light.Transitions.Select(transition => new
+                    {
+                        property = transition.Property,
+                        durationMs = transition.DurationMs,
+                        easing = transition.Easing
+                    }),
                     position = ToJsVector(delta.Light.Position)
                 }
                 : null,

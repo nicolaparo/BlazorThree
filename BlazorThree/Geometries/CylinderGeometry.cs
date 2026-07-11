@@ -8,32 +8,63 @@ namespace BlazorThree.Geometries;
 /// <summary>
 /// Publishes cylinder geometry settings to the containing mesh.
 /// </summary>
-public class CylinderGeometry : ComponentBase
+public class CylinderGeometry : TransitionScopedComponentBase
 {
-    [CascadingParameter]
-    private MeshContext? MeshContext { get; set; }
+    /// <summary>
+    /// Gets or sets the radius top.
+    /// </summary>
+    
 
+    [Animatable]
     [Parameter]
     public double RadiusTop { get; set; } = 1;
+    /// <summary>
+    /// Gets or sets the radius bottom.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public double RadiusBottom { get; set; } = 1;
+    /// <summary>
+    /// Gets or sets the height.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public double Height { get; set; } = 1;
+    /// <summary>
+    /// Gets or sets the radial segments.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public int RadialSegments { get; set; } = 32;
+    /// <summary>
+    /// Gets or sets the height segments.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public int HeightSegments { get; set; } = 1;
+    /// <summary>
+    /// Gets or sets the open ended.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public bool OpenEnded { get; set; }
+    /// <summary>
+    /// Gets or sets the theta start.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public double ThetaStart { get; set; }
+    /// <summary>
+    /// Gets or sets the theta length.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public double ThetaLength { get; set; } = Math.PI * 2;
 
@@ -52,4 +83,4 @@ public class CylinderGeometry : ComponentBase
         });
     }
 }
-#pragma warning restore CS1591
+

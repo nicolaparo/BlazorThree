@@ -3,6 +3,9 @@ using System.Numerics;
 using System.Reflection;
 
 namespace BlazorThree.Engine;
+/// <summary>
+/// Represents wire state compactor.
+/// </summary>
 
 internal static class WireStateCompactor
 {

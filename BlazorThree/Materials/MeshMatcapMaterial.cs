@@ -7,14 +7,21 @@ namespace BlazorThree.Materials;
 /// <summary>
 /// Publishes matcap material settings to the containing mesh.
 /// </summary>
-public class MeshMatcapMaterial : ComponentBase
+public class MeshMatcapMaterial : TransitionScopedComponentBase
 {
-    [CascadingParameter]
-    private MeshContext? MeshContext { get; set; }
+    /// <summary>
+    /// Gets or sets the color.
+    /// </summary>
+    
 
+    [Animatable]
     [Parameter]
     public string Color { get; set; } = "#ffffff";
+    /// <summary>
+    /// Gets or sets the matcap url.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public string? MatcapUrl { get; set; }
 
@@ -27,4 +34,4 @@ public class MeshMatcapMaterial : ComponentBase
         });
     }
 }
-#pragma warning restore CS1591
+

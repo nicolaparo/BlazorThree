@@ -7,14 +7,21 @@ namespace BlazorThree.Geometries;
 /// <summary>
 /// Publishes shape geometry settings to the containing mesh.
 /// </summary>
-public class ShapeGeometry : ComponentBase
+public class ShapeGeometry : TransitionScopedComponentBase
 {
-    [CascadingParameter]
-    private MeshContext? MeshContext { get; set; }
+    /// <summary>
+    /// Gets or sets the points.
+    /// </summary>
+    
 
+    [Animatable]
     [Parameter]
     public double[] Points { get; set; } = [-0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, 0.5];
+    /// <summary>
+    /// Gets or sets the curve segments.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public int CurveSegments { get; set; } = 12;
 
@@ -27,4 +34,4 @@ public class ShapeGeometry : ComponentBase
         });
     }
 }
-#pragma warning restore CS1591
+

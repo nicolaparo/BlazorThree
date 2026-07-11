@@ -7,14 +7,21 @@ namespace BlazorThree.Geometries;
 /// <summary>
 /// Publishes dodecahedron geometry settings to the containing mesh.
 /// </summary>
-public class DodecahedronGeometry : ComponentBase
+public class DodecahedronGeometry : TransitionScopedComponentBase
 {
-    [CascadingParameter]
-    private MeshContext? MeshContext { get; set; }
+    /// <summary>
+    /// Gets or sets the radius.
+    /// </summary>
+    
 
+    [Animatable]
     [Parameter]
     public double Radius { get; set; } = 1;
+    /// <summary>
+    /// Gets or sets the detail.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public int Detail { get; set; }
 
@@ -27,4 +34,4 @@ public class DodecahedronGeometry : ComponentBase
         });
     }
 }
-#pragma warning restore CS1591
+

@@ -8,6 +8,9 @@ namespace BlazorThree;
 /// </summary>
 public class OrbitControls : ComponentBase
 {
+    /// <summary>
+    /// Gets or sets the scene context.
+    /// </summary>
     [CascadingParameter]
     private SceneContext? SceneContext { get; set; }
 

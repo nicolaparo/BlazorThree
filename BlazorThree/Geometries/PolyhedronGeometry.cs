@@ -7,20 +7,35 @@ namespace BlazorThree.Geometries;
 /// <summary>
 /// Publishes custom polyhedron geometry settings to the containing mesh.
 /// </summary>
-public class PolyhedronGeometry : ComponentBase
+public class PolyhedronGeometry : TransitionScopedComponentBase
 {
-    [CascadingParameter]
-    private MeshContext? MeshContext { get; set; }
+    /// <summary>
+    /// Gets or sets the vertices.
+    /// </summary>
+    
 
+    [Animatable]
     [Parameter]
     public double[] Vertices { get; set; } = [1, 1, 1, -1, -1, 1, -1, 1, -1, 1, -1, -1];
+    /// <summary>
+    /// Gets or sets the indices.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public int[] Indices { get; set; } = [2, 1, 0, 0, 3, 2, 1, 3, 0, 2, 3, 1];
+    /// <summary>
+    /// Gets or sets the radius.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public double Radius { get; set; } = 1;
+    /// <summary>
+    /// Gets or sets the detail.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public int Detail { get; set; }
 
@@ -35,4 +50,4 @@ public class PolyhedronGeometry : ComponentBase
         });
     }
 }
-#pragma warning restore CS1591
+

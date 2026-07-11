@@ -7,26 +7,49 @@ namespace BlazorThree.Geometries;
 /// <summary>
 /// Publishes torus-knot geometry settings to the containing mesh.
 /// </summary>
-public class TorusKnotGeometry : ComponentBase
+public class TorusKnotGeometry : TransitionScopedComponentBase
 {
-    [CascadingParameter]
-    private MeshContext? MeshContext { get; set; }
+    /// <summary>
+    /// Gets or sets the radius.
+    /// </summary>
+    
 
+    [Animatable]
     [Parameter]
     public double Radius { get; set; } = 1;
+    /// <summary>
+    /// Gets or sets the tube.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public double Tube { get; set; } = 0.4;
+    /// <summary>
+    /// Gets or sets the tubular segments.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public int TubularSegments { get; set; } = 64;
+    /// <summary>
+    /// Gets or sets the radial segments.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public int RadialSegments { get; set; } = 8;
+    /// <summary>
+    /// Gets or sets the p.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public int P { get; set; } = 2;
+    /// <summary>
+    /// Gets or sets the q.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public int Q { get; set; } = 3;
 
@@ -43,4 +66,4 @@ public class TorusKnotGeometry : ComponentBase
         });
     }
 }
-#pragma warning restore CS1591
+

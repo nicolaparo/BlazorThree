@@ -16,6 +16,9 @@ public class Timeline : ComponentBase, IDisposable
     private string? previousName;
 
     private bool isDisposed;
+    /// <summary>
+    /// Gets or sets the scene context.
+    /// </summary>
 
     [CascadingParameter]
     private SceneContext? SceneContext { get; set; }

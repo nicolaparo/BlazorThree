@@ -7,17 +7,28 @@ namespace BlazorThree.Materials;
 /// <summary>
 /// Publishes basic material settings to the containing mesh.
 /// </summary>
-public class MeshBasicMaterial : ComponentBase
+public class MeshBasicMaterial : TransitionScopedComponentBase
 {
-    [CascadingParameter]
-    private MeshContext? MeshContext { get; set; }
+    /// <summary>
+    /// Gets or sets the color.
+    /// </summary>
+    
 
+    [Animatable]
     [Parameter]
     public string Color { get; set; } = "#00a2ff";
+    /// <summary>
+    /// Gets or sets the texture url.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public string? TextureUrl { get; set; }
+    /// <summary>
+    /// Gets or sets the wireframe.
+    /// </summary>
 
+    [Animatable]
     [Parameter]
     public bool Wireframe { get; set; }
 
@@ -31,4 +42,4 @@ public class MeshBasicMaterial : ComponentBase
         });
     }
 }
-#pragma warning restore CS1591
+
