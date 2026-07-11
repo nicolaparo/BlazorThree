@@ -3,7 +3,7 @@ import { ColladaLoader } from "https://esm.sh/three@0.178.0/examples/jsm/loaders
 import { FBXLoader } from "https://esm.sh/three@0.178.0/examples/jsm/loaders/FBXLoader";
 import { GLTFLoader } from "https://esm.sh/three@0.178.0/examples/jsm/loaders/GLTFLoader";
 import { buildGeometry, buildMaterial } from "./assets.js";
-import { applyTransition, mergeTransform, readBaseTransform, readVector3, signature, transformSignature, value } from "./shared.js";
+import { mergeTransform, readBaseTransform, readVector3, signature, value } from "./shared.js";
 import { applyRecordTarget } from "./timeline.js";
 
 function getParentObject(state, parentId) {
@@ -428,7 +428,26 @@ export function clearSceneNodes(state) {
     state.groups.clear();
 }
 
-export function syncGroups(state, groups, transitionMap, timelineMap) {
+function buildNodeTransitionMap(nodeState) {
+    const map = new Map();
+    const transitions = value(nodeState, "transitions", "Transitions", []);
+
+    for (const transition of transitions) {
+        const property = value(transition, "property", "Property", null);
+        if (!property) {
+            continue;
+        }
+
+        const key = String(property).trim().toLowerCase();
+        if (key === "position" || key === "rotation" || key === "scale") {
+            map.set(key, transition);
+        }
+    }
+
+    return map;
+}
+
+export function syncGroups(state, groups, timelineMap) {
     const liveGroupIds = new Set();
 
     for (const groupState of groups) {
@@ -444,7 +463,7 @@ export function syncGroups(state, groups, transitionMap, timelineMap) {
                 targetSignature: "",
                 animation: null,
                 baseTransform: null,
-                transitionState: null
+                transitionMap: new Map()
             };
             state.groups.set(groupId, record);
         }
@@ -455,18 +474,17 @@ export function syncGroups(state, groups, transitionMap, timelineMap) {
         const className = value(groupState, "className", "ClassName", null);
         record.className = className;
         const baseTransform = readBaseTransform(groupState);
-        const transitionState = className ? transitionMap.get(className) : null;
         record.baseTransform = baseTransform;
-        record.transitionState = transitionState;
+        record.transitionMap = buildNodeTransitionMap(groupState);
         const timelineTransform = className ? timelineMap.get(className) : null;
-        const targetTransform = mergeTransform(applyTransition(baseTransform, transitionState), timelineTransform);
-        applyRecordTarget(record, targetTransform, transitionState, timelineTransform);
+        const targetTransform = mergeTransform(baseTransform, timelineTransform);
+        applyRecordTarget(record, targetTransform, timelineTransform);
     }
 
     return liveGroupIds;
 }
 
-export function syncMeshes(state, meshes, transitionMap, timelineMap) {
+export function syncMeshes(state, meshes, timelineMap) {
     const liveMeshIds = new Set();
 
     for (const meshState of meshes) {
@@ -485,7 +503,7 @@ export function syncMeshes(state, meshes, transitionMap, timelineMap) {
                 animation: null,
                 outline: null,
                 baseTransform: null,
-                transitionState: null,
+                transitionMap: new Map(),
                 geometrySignature: "",
                 materialSignature: "",
                 outlineSignature: ""
@@ -527,18 +545,17 @@ export function syncMeshes(state, meshes, transitionMap, timelineMap) {
         const className = value(meshState, "className", "ClassName", null);
         record.className = className;
         const baseTransform = readBaseTransform(meshState);
-        const transitionState = className ? transitionMap.get(className) : null;
         record.baseTransform = baseTransform;
-        record.transitionState = transitionState;
+        record.transitionMap = buildNodeTransitionMap(meshState);
         const timelineTransform = className ? timelineMap.get(className) : null;
-        const targetTransform = mergeTransform(applyTransition(baseTransform, transitionState), timelineTransform);
-        applyRecordTarget(record, targetTransform, transitionState, timelineTransform);
+        const targetTransform = mergeTransform(baseTransform, timelineTransform);
+        applyRecordTarget(record, targetTransform, timelineTransform);
     }
 
     return liveMeshIds;
 }
 
-export function syncModels(state, models, transitionMap, timelineMap) {
+export function syncModels(state, models, timelineMap) {
     const liveModelIds = new Set();
 
     for (const modelState of models) {
@@ -557,7 +574,7 @@ export function syncModels(state, models, transitionMap, timelineMap) {
                 targetSignature: "",
                 animation: null,
                 baseTransform: null,
-                transitionState: null,
+                transitionMap: new Map(),
                 sourceSignature: "",
                 loadToken: 0,
                 animationMixer: null,
@@ -618,12 +635,11 @@ export function syncModels(state, models, transitionMap, timelineMap) {
         const className = value(modelState, "className", "ClassName", null);
         record.className = className;
         const baseTransform = readBaseTransform(modelState);
-        const transitionState = className ? transitionMap.get(className) : null;
         record.baseTransform = baseTransform;
-        record.transitionState = transitionState;
+        record.transitionMap = buildNodeTransitionMap(modelState);
         const timelineTransform = className ? timelineMap.get(className) : null;
-        const targetTransform = mergeTransform(applyTransition(baseTransform, transitionState), timelineTransform);
-        applyRecordTarget(record, targetTransform, transitionState, timelineTransform);
+        const targetTransform = mergeTransform(baseTransform, timelineTransform);
+        applyRecordTarget(record, targetTransform, timelineTransform);
 
         record.latestModelState = modelState;
         syncModelAnimation(record, modelState);

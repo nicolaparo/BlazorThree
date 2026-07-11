@@ -1,6 +1,5 @@
 import {
-    applyTransition,
-    cloneTransform,
+    cloneVector3,
     ease,
     interpolateVector,
     lerp,
@@ -13,20 +12,6 @@ import {
     transformSignature,
     value
 } from "./shared.js";
-
-export function buildTransitionMap(graph) {
-    const transitionMap = new Map();
-    const transitions = value(graph, "transitions", "Transitions", []);
-
-    for (const transition of transitions) {
-        const className = value(transition, "className", "ClassName", null);
-        if (className) {
-            transitionMap.set(className, transition);
-        }
-    }
-
-    return transitionMap;
-}
 
 function sampleTimelineTrack(track, currentTimeMs, loop) {
     const keyframes = value(track, "keyframes", "Keyframes", []);
@@ -164,7 +149,7 @@ export function applyLiveTimeline(state, timelineMap) {
             continue;
         }
 
-        const targetTransform = mergeTransform(applyTransition(record.baseTransform, record.transitionState), timelineTransform);
+        const targetTransform = mergeTransform(record.baseTransform, timelineTransform);
         record.animation = null;
         setObjectTransform(record.object3D, targetTransform);
         record.targetSignature = `${record.className}:${transformSignature(targetTransform)}`;
@@ -180,7 +165,7 @@ export function applyLiveTimeline(state, timelineMap) {
             continue;
         }
 
-        const targetTransform = mergeTransform(applyTransition(record.baseTransform, record.transitionState), timelineTransform);
+        const targetTransform = mergeTransform(record.baseTransform, timelineTransform);
         record.animation = null;
         setObjectTransform(record.object3D, targetTransform);
         record.targetSignature = `${record.className}:${transformSignature(targetTransform)}`;
@@ -196,7 +181,7 @@ export function applyLiveTimeline(state, timelineMap) {
             continue;
         }
 
-        const targetTransform = mergeTransform(applyTransition(record.baseTransform, record.transitionState), timelineTransform);
+        const targetTransform = mergeTransform(record.baseTransform, timelineTransform);
         record.animation = null;
         setObjectTransform(record.object3D, targetTransform);
         record.targetSignature = `${record.className}:${transformSignature(targetTransform)}`;
@@ -207,29 +192,40 @@ export function updateRecordAnimation(record, timestamp) {
     if (!record.animation) {
         return;
     }
-
-    const elapsed = timestamp - record.animation.start;
-    const duration = Math.max(1, record.animation.duration);
-    const raw = Math.min(1, elapsed / duration);
-    const t = ease(raw, record.animation.easing);
-    const next = {};
+    let hasActiveChannels = false;
 
     for (const key of transformKeys) {
-        next[key] = {
-            x: lerp(record.animation.from[key].x, record.animation.to[key].x, t),
-            y: lerp(record.animation.from[key].y, record.animation.to[key].y, t),
-            z: lerp(record.animation.from[key].z, record.animation.to[key].z, t)
+        const channel = record.animation[key];
+        if (!channel) {
+            continue;
+        }
+
+        const elapsed = timestamp - channel.start;
+        const duration = Math.max(1, channel.duration);
+        const raw = Math.min(1, elapsed / duration);
+        const t = ease(raw, channel.easing);
+
+        const nextVector = {
+            x: lerp(channel.from.x, channel.to.x, t),
+            y: lerp(channel.from.y, channel.to.y, t),
+            z: lerp(channel.from.z, channel.to.z, t)
         };
+
+        setObjectVector(record.object3D, key, nextVector);
+
+        if (raw >= 1) {
+            record.animation[key] = null;
+        } else {
+            hasActiveChannels = true;
+        }
     }
 
-    setObjectTransform(record.object3D, next);
-
-    if (raw >= 1) {
+    if (!hasActiveChannels) {
         record.animation = null;
     }
 }
 
-export function applyRecordTarget(record, targetTransform, transitionState, timelineTransform) {
+export function applyRecordTarget(record, targetTransform, timelineTransform) {
     const targetSignature = `${record.className || ""}:${transformSignature(targetTransform)}`;
 
     if (timelineTransform) {
@@ -243,21 +239,64 @@ export function applyRecordTarget(record, targetTransform, transitionState, time
         return;
     }
 
-    const duration = transitionState ? value(transitionState, "durationMs", "DurationMs", 650) : 0;
-    const easingName = transitionState ? value(transitionState, "easing", "Easing", "easeInOutQuad") : "linear";
+    const currentTransform = readObjectTransform(record.object3D);
+    const channelAnimations = {
+        position: null,
+        rotation: null,
+        scale: null
+    };
 
-    if (duration > 0) {
-        record.animation = {
-            from: readObjectTransform(record.object3D),
-            to: cloneTransform(targetTransform),
-            duration,
-            easing: easingName,
-            start: now()
-        };
-    } else {
-        record.animation = null;
-        setObjectTransform(record.object3D, targetTransform);
+    let hasAnimation = false;
+
+    for (const key of transformKeys) {
+        const current = currentTransform[key];
+        const target = targetTransform[key];
+        const transition = record.transitionMap?.get(key) ?? null;
+        const duration = transition ? value(transition, "durationMs", "DurationMs", 650) : 0;
+        const easingName = transition ? value(transition, "easing", "Easing", "easeInOutQuad") : "linear";
+
+        if (duration > 0 && hasVectorChange(current, target)) {
+            channelAnimations[key] = {
+                from: cloneVector3(current),
+                to: cloneVector3(target),
+                duration,
+                easing: easingName,
+                start: now()
+            };
+            hasAnimation = true;
+            continue;
+        }
+
+        setObjectVector(record.object3D, key, target);
     }
 
+    record.animation = hasAnimation ? channelAnimations : null;
+
     record.targetSignature = targetSignature;
+}
+
+function setObjectVector(object3D, key, vector) {
+    if (key === "position") {
+        object3D.position.set(vector.x, vector.y, vector.z);
+        return;
+    }
+
+    if (key === "rotation") {
+        object3D.rotation.set(vector.x, vector.y, vector.z);
+        return;
+    }
+
+    object3D.scale.set(vector.x, vector.y, vector.z);
+}
+
+function hasVectorChange(left, right) {
+    if (!left || !right) {
+        return false;
+    }
+
+    return (
+        Math.abs(left.x - right.x) > 0.00001
+        || Math.abs(left.y - right.y) > 0.00001
+        || Math.abs(left.z - right.z) > 0.00001
+    );
 }

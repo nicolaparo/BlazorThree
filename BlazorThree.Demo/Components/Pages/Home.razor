@@ -6,43 +6,47 @@
 
 <div class="scene-page">
     <Scene Width="100%" Height="100%" ClearColor="#101925">
-        <Camera Fov="65" Position="@(new Vector3(0f, 1.4f, 7f))" />
-        <Light Type="LightDefinitions.Directional" Intensity="1.6" Position="@(new Vector3(6f, 8f, 3f))" />
+        <Camera Fov="65" Position="@(new(0f, 1.4f, 7f))" />
+        <Light Type="LightDefinitions.Directional" Intensity="1.6" Position="@(new(6f, 8f, 3f))" />
         <OrbitControls Enabled="true" EnableDamping="true" DampingFactor="0.09" />
 
-        <Transition ClassName="stage-idle" DurationMs="550" Easing="easeInOutQuad" Position="@Vector3.Zero" Rotation="@Vector3.Zero" Scale="@Vector3.One" />
-        <Transition ClassName="stage-active" DurationMs="1200" Easing="easeOutCubic" Position="@(new Vector3(0f, 0.9f, 0f))" Rotation="@(new Vector3(0f, 1.8f, 0f))" Scale="@(new Vector3(1.2f, 1.2f, 1.2f))" />
+        <Group Position="@(stageActive ? new(0f, 0.9f, 0f) : Vector3.Zero)"
+               Rotation="@(stageActive ? new(0f, 1.8f, 0f) : Vector3.Zero)"
+               Scale="@(stageActive ? new(-1f, -1f, -1f) : Vector3.One)">
 
-        <Group Position="@Vector3.Zero" ClassName="@currentStageClass">
+            <Transition Properties="@([nameof(Group.Position), nameof(Group.Rotation), nameof(Group.Scale)])" 
+                        DurationMs="1200" 
+                        Easing="@Easings.EaseInOutQuad"/>
 
-            <Mesh id="cube"
-                  Position="@(new Vector3(-1.7f, 0.1f, 0f))"
-                  OnClick="OnElementClick"
-                  OnMouseEnter="OnElementMouseEnter"
-                  OnMouseLeave="OnElementMouseLeave">
-                <BoxGeometry Width="1" Height="1" Depth="1" />
-                <MeshStandardMaterial Color="#f5f500" Metalness="0.05" Roughness="0.55" />
-                @if (TryGetOutlineColor("cube") is string cubeOutlineColor)
-                {
-                    <Outline Color="@cubeOutlineColor" Opacity="0.98" />
-                }
-            </Mesh>
-
-            <Mesh id="sphere"
-                  Position="@(new Vector3(1.7f, 0.1f, 0f))"
-                  OnClick="OnElementClick"
-                  OnMouseEnter="OnElementMouseEnter"
-                  OnMouseLeave="OnElementMouseLeave">
-                <SphereGeometry Radius="0.9" WidthSegments="48" HeightSegments="24" />
-                <MeshStandardMaterial Color="#ffffff"
-                                      TextureUrl="https://threejs.org/examples/textures/uv_grid_opengl.jpg"
-                                      Metalness="0.05"
-                                      Roughness="0.55" />
-                @if (TryGetOutlineColor("sphere") is string sphereOutlineColor)
-                {
-                    <Outline Color="@sphereOutlineColor" Opacity="0.98" />
-                }
-            </Mesh>
+            @if (boxVisible)
+            {
+                <Mesh Position="@(new(-1.7f, 0.1f, 0f))"
+                      OnClick='() => selectedElement = "box"'>
+                    <BoxGeometry Width="1" Height="1" Depth="1"/>
+                    <MeshStandardMaterial Color="#f5f500" Metalness="0.05" Roughness="0.55" />
+                    @if (selectedElement == "box")
+                    {
+                        <Outline Color="#ff0000" Opacity="0.98"/>
+                    }
+                </Mesh>
+            }
+            
+            @if (sphereVisible)
+            {
+                <Mesh id="sphere"
+                      Position="@(new Vector3(1.7f, 0.1f, 0f))"
+                      OnClick='() => selectedElement = "sphere"'>
+                    <SphereGeometry Radius="0.9" WidthSegments="48" HeightSegments="24"/>
+                    <MeshStandardMaterial Color="#ffffff"
+                                          TextureUrl="https://threejs.org/examples/textures/uv_grid_opengl.jpg"
+                                          Metalness="0.05"
+                                          Roughness="0.55"/>
+                    @if (selectedElement == "sphere")
+                    {
+                        <Outline Color="#0000ff" Opacity="0.98"/>
+                    }
+                </Mesh>
+            }
         </Group>
 
         <Mesh Position="@(new Vector3(0f, -1.5f, 0f))">
@@ -53,9 +57,19 @@
 
     <aside class="right-panel">
         <h2>Controls</h2>
-        <button class="btn btn-primary" @onclick="ToggleStageClass">
-            Toggle Class (@currentStageClass)
+        <button class="btn btn-primary" @onclick="() => stageActive = !stageActive">
+            Toggle Stage (@(stageActive ? "active" : "idle"))
         </button>
+        <div class="row">
+            <div class="col">
+                <input id="box-visible" type="checkbox" @bind="boxVisible" />
+                <label for="box-visible">Box Visible</label>
+            </div>
+            <div class="col">
+                <input id="sphere-visible" type="checkbox" @bind="sphereVisible" />
+                <label for="sphere-visible">Sphere Visible</label>
+            </div>
+        </div>
     </aside>
 </div>
 
@@ -97,45 +111,8 @@
 </style>
 
 @code {
-
-    private string currentStageClass = "stage-idle";
-
-    private string? hoveredElementId;
-
-    private string? selectedElementId;
-
-    private void ToggleStageClass()
-    {
-        currentStageClass = currentStageClass == "stage-idle" ? "stage-active" : "stage-idle";
-    }
-
-    private void OnElementMouseEnter(SceneElementMouseEventArgs args)
-    {
-        hoveredElementId = args.ElementId;
-    }
-
-    private void OnElementMouseLeave(SceneElementMouseEventArgs args)
-    {
-        hoveredElementId = null;
-    }
-
-    private void OnElementClick(SceneElementMouseEventArgs args)
-    {
-        selectedElementId = args.ElementId;
-    }
-
-    private string? TryGetOutlineColor(string elementId)
-    {
-        if (string.Equals(selectedElementId, elementId, StringComparison.Ordinal))
-        {
-            return "#2f80ff";
-        }
-
-        if (string.Equals(hoveredElementId, elementId, StringComparison.Ordinal))
-        {
-            return "#ffd84d";
-        }
-
-        return null;
-    }
+    private bool stageActive;
+    private bool boxVisible = true;
+    private bool sphereVisible = true;
+    private string selectedElement = "";
 }

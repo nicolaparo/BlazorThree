@@ -222,18 +222,6 @@ export function setObjectTransform(object3D, transform) {
     object3D.scale.set(transform.scale.x, transform.scale.y, transform.scale.z);
 }
 
-export function applyTransition(baseTransform, transitionState) {
-    if (!transitionState) {
-        return cloneTransform(baseTransform);
-    }
-
-    return {
-        position: readVector3(transitionState, "position", "Position", baseTransform.position),
-        rotation: readVector3(transitionState, "rotation", "Rotation", baseTransform.rotation),
-        scale: readVector3(transitionState, "scale", "Scale", baseTransform.scale)
-    };
-}
-
 export function mergeTransform(baseTransform, overrideTransform) {
     if (!overrideTransform) {
         return baseTransform;

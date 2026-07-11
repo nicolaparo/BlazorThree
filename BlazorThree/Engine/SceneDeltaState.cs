@@ -30,10 +30,6 @@ internal sealed class SceneDeltaState
 
     public IReadOnlyCollection<string> DispatchableElementMouseLeaveKeys { get; init; } = Array.Empty<string>();
 
-    public bool TransitionsChanged { get; init; }
-
-    public IReadOnlyList<TransitionState> Transitions { get; init; } = Array.Empty<TransitionState>();
-
     public bool TimelinesChanged { get; init; }
 
     public IReadOnlyList<TimelineState> Timelines { get; init; } = Array.Empty<TimelineState>();
@@ -56,7 +52,6 @@ internal sealed class SceneDeltaState
         || LightChanged
         || OrbitControlsChanged
         || InteractionChanged
-        || TransitionsChanged
         || TimelinesChanged
         || UpsertGroups.Count > 0
         || RemoveGroupIds.Count > 0

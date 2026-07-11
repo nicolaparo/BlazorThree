@@ -15,6 +15,8 @@ public class Timeline : ComponentBase, IDisposable
 
     private string? previousName;
 
+    private bool isDisposed;
+
     [CascadingParameter]
     private SceneContext? SceneContext { get; set; }
 
@@ -66,12 +68,22 @@ public class Timeline : ComponentBase, IDisposable
     {
         timelineContext.UpsertTrack = track =>
         {
+            if (isDisposed)
+            {
+                return;
+            }
+
             tracks[track.Id] = track;
             Publish();
         };
 
         timelineContext.RemoveTrack = id =>
         {
+            if (isDisposed)
+            {
+                return;
+            }
+
             if (tracks.Remove(id))
             {
                 Publish();
@@ -95,6 +107,11 @@ public class Timeline : ComponentBase, IDisposable
 
     private void Publish()
     {
+        if (isDisposed)
+        {
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(Name))
         {
             return;
@@ -115,6 +132,10 @@ public class Timeline : ComponentBase, IDisposable
     /// </summary>
     public void Dispose()
     {
+        isDisposed = true;
+        timelineContext.UpsertTrack = null;
+        timelineContext.RemoveTrack = null;
+
         if (!string.IsNullOrWhiteSpace(previousName))
         {
             SceneContext?.RemoveTimeline(previousName);

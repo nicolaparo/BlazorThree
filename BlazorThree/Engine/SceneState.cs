@@ -10,8 +10,6 @@ internal sealed class SceneState
 
     public IReadOnlyList<GroupState> Groups { get; set; } = Array.Empty<GroupState>();
 
-    public IReadOnlyList<TransitionState> Transitions { get; set; } = Array.Empty<TransitionState>();
-
     public IReadOnlyList<TimelineState> Timelines { get; set; } = Array.Empty<TimelineState>();
 
     public IReadOnlyList<MeshState> Meshes { get; set; } = Array.Empty<MeshState>();

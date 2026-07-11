@@ -286,18 +286,6 @@ public partial class Scene
                 : null,
             orbitControlsChanged = delta.OrbitControlsChanged,
             orbitControls = delta.OrbitControlsChanged ? delta.OrbitControls : null,
-            transitionsChanged = delta.TransitionsChanged,
-            transitions = delta.TransitionsChanged
-                ? delta.Transitions.Select(transition => new
-                {
-                    className = transition.ClassName,
-                    durationMs = transition.DurationMs,
-                    easing = transition.Easing,
-                    position = ToJsVector(transition.Position),
-                    rotation = ToJsVector(transition.Rotation),
-                    scale = ToJsVector(transition.Scale)
-                })
-                : null,
             timelinesChanged = delta.TimelinesChanged,
             timelines = delta.TimelinesChanged
                 ? delta.Timelines.Select(timeline => new
@@ -327,6 +315,12 @@ public partial class Scene
                 id = group.Id,
                 parentId = group.ParentId,
                 className = group.ClassName,
+                transitions = group.Transitions.Select(transition => new
+                {
+                    property = transition.Property,
+                    durationMs = transition.DurationMs,
+                    easing = transition.Easing
+                }),
                 position = ToJsVector(group.Position),
                 rotation = ToJsVector(group.Rotation),
                 scale = ToJsVector(group.Scale)
@@ -340,6 +334,12 @@ public partial class Scene
                 material = mesh.Material,
                 outline = mesh.Outline,
                 className = mesh.ClassName,
+                transitions = mesh.Transitions.Select(transition => new
+                {
+                    property = transition.Property,
+                    durationMs = transition.DurationMs,
+                    easing = transition.Easing
+                }),
                 position = ToJsVector(mesh.Position),
                 rotation = ToJsVector(mesh.Rotation),
                 scale = ToJsVector(mesh.Scale)
@@ -351,6 +351,12 @@ public partial class Scene
                 parentId = model.ParentId,
                 sourceUrl = model.SourceUrl,
                 className = model.ClassName,
+                transitions = model.Transitions.Select(transition => new
+                {
+                    property = transition.Property,
+                    durationMs = transition.DurationMs,
+                    easing = transition.Easing
+                }),
                 position = ToJsVector(model.Position),
                 rotation = ToJsVector(model.Rotation),
                 scale = ToJsVector(model.Scale),

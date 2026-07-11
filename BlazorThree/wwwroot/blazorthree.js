@@ -2,8 +2,8 @@ import * as THREE from "https://esm.sh/three@0.178.0";
 import { OrbitControls } from "https://esm.sh/three@0.178.0/examples/jsm/controls/OrbitControls";
 import { buildCamera, ensureCamera, ensureLight } from "./blazorthree/assets.js";
 import { clearSceneNodes, disposeGroupRecord, disposeMeshRecord, disposeModelRecord, syncGroups, syncMeshes, syncModels, updateModelPlayback } from "./blazorthree/nodes.js";
-import { applyTransition, mergeTransform, now, value } from "./blazorthree/shared.js";
-import { applyLiveTimeline, applyRecordTarget, buildTimelineMap, buildTransitionMap, updateRecordAnimation } from "./blazorthree/timeline.js";
+import { now, value } from "./blazorthree/shared.js";
+import { applyLiveTimeline, buildTimelineMap, updateRecordAnimation } from "./blazorthree/timeline.js";
 
 const scenes = new Map();
 
@@ -199,50 +199,6 @@ function render(state) {
     state.renderer.render(state.scene, state.camera);
 }
 
-function refreshTransitionTargets(state, timelineMap) {
-    for (const record of state.groups.values()) {
-        const className = record.className;
-        const transitionState = className ? state.transitionMap.get(className) : null;
-        record.transitionState = transitionState;
-
-        if (!record.baseTransform) {
-            continue;
-        }
-
-        const timelineTransform = className ? timelineMap.get(className) : null;
-        const targetTransform = mergeTransform(applyTransition(record.baseTransform, transitionState), timelineTransform);
-        applyRecordTarget(record, targetTransform, transitionState, timelineTransform);
-    }
-
-    for (const record of state.meshes.values()) {
-        const className = record.className;
-        const transitionState = className ? state.transitionMap.get(className) : null;
-        record.transitionState = transitionState;
-
-        if (!record.baseTransform) {
-            continue;
-        }
-
-        const timelineTransform = className ? timelineMap.get(className) : null;
-        const targetTransform = mergeTransform(applyTransition(record.baseTransform, transitionState), timelineTransform);
-        applyRecordTarget(record, targetTransform, transitionState, timelineTransform);
-    }
-
-    for (const record of state.models.values()) {
-        const className = record.className;
-        const transitionState = className ? state.transitionMap.get(className) : null;
-        record.transitionState = transitionState;
-
-        if (!record.baseTransform) {
-            continue;
-        }
-
-        const timelineTransform = className ? timelineMap.get(className) : null;
-        const targetTransform = mergeTransform(applyTransition(record.baseTransform, transitionState), timelineTransform);
-        applyRecordTarget(record, targetTransform, transitionState, timelineTransform);
-    }
-}
-
 export function initScene(hostElement, options, dotNetRef) {
     const sceneId = crypto.randomUUID();
     const clearColor = value(options, "clearColor", "ClearColor", "#0d1117");
@@ -276,7 +232,6 @@ export function initScene(hostElement, options, dotNetRef) {
         models: new Map(),
         timelines: [],
         timelinePlayback: new Map(),
-        transitionMap: new Map(),
         cameraSignature: "",
         lightSignature: "",
         lightKind: null,
@@ -349,12 +304,6 @@ export function syncScene(sceneId, graph) {
 
     const isFull = value(graph, "isFull", "IsFull", false);
 
-    const transitionsChanged = isFull || value(graph, "transitionsChanged", "TransitionsChanged", false);
-    if (transitionsChanged) {
-        const transitions = value(graph, "transitions", "Transitions", []);
-        state.transitionMap = buildTransitionMap({ transitions });
-    }
-
     const timelinesChanged = isFull || value(graph, "timelinesChanged", "TimelinesChanged", false);
     if (timelinesChanged) {
         state.timelines = value(graph, "timelines", "Timelines", []);
@@ -424,9 +373,9 @@ export function syncScene(sceneId, graph) {
     const modelStates = value(graph, "upsertModels", "UpsertModels", []);
 
     if (isFull) {
-        const liveGroupIds = syncGroups(state, groupStates, state.transitionMap, timelineMap);
-        const liveMeshIds = syncMeshes(state, meshStates, state.transitionMap, timelineMap);
-        const liveModelIds = syncModels(state, modelStates, state.transitionMap, timelineMap);
+        const liveGroupIds = syncGroups(state, groupStates, timelineMap);
+        const liveMeshIds = syncMeshes(state, meshStates, timelineMap);
+        const liveModelIds = syncModels(state, modelStates, timelineMap);
 
         for (const [id, record] of state.meshes.entries()) {
             if (!liveMeshIds.has(id)) {
@@ -450,7 +399,7 @@ export function syncScene(sceneId, graph) {
         }
     } else {
         if (groupStates.length) {
-            syncGroups(state, groupStates, state.transitionMap, timelineMap);
+            syncGroups(state, groupStates, timelineMap);
         }
 
         const removeGroupIds = value(graph, "removeGroupIds", "RemoveGroupIds", []);
@@ -465,7 +414,7 @@ export function syncScene(sceneId, graph) {
         }
 
         if (meshStates.length) {
-            syncMeshes(state, meshStates, state.transitionMap, timelineMap);
+            syncMeshes(state, meshStates, timelineMap);
         }
 
         const removeMeshIds = value(graph, "removeMeshIds", "RemoveMeshIds", []);
@@ -480,7 +429,7 @@ export function syncScene(sceneId, graph) {
         }
 
         if (modelStates.length) {
-            syncModels(state, modelStates, state.transitionMap, timelineMap);
+            syncModels(state, modelStates, timelineMap);
         }
 
         const removeModelIds = value(graph, "removeModelIds", "RemoveModelIds", []);
@@ -493,10 +442,6 @@ export function syncScene(sceneId, graph) {
             disposeModelRecord(record);
             state.models.delete(id);
         }
-    }
-
-    if (transitionsChanged) {
-        refreshTransitionTargets(state, timelineMap);
     }
 
     render(state);

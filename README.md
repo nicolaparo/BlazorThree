@@ -10,7 +10,7 @@ BlazorThree is still a preview feature. The API surface, runtime behavior, packa
 
 - Declarative scene composition with `Scene`, `Camera`, `Light`, `Group`, `Mesh`, and `Model`
 - Nested transform hierarchies with shared position, rotation, and scale primitives
-- Class-based transitions for state changes
+- Per-node property transitions for state changes
 - Keyframed timelines for continuous animation
 - Model loading for `.glb`, `.gltf`, `.fbx`, and `.dae`
 - Model clip discovery, playback, looping, scrubbing, and blend control
@@ -52,22 +52,8 @@ No service registration is required. `Scene` loads the JavaScript bridge automat
       Position="new Vector3(6f, 8f, 3f)" />
    <OrbitControls Enabled="true" EnableDamping="true" DampingFactor="0.09" />
 
-   <Transition
-      ClassName="stage-idle"
-      DurationMs="550"
-      Position="Vector3.Zero"
-      Rotation="Vector3.Zero"
-      Scale="Vector3.One" />
-
-   <Transition
-      ClassName="stage-active"
-      DurationMs="1200"
-      Easing="@Easings.EaseOutCubic"
-      Position="new Vector3(0f, 0.9f, 0f)"
-      Rotation="new Vector3(0f, 1.8f, 0f)"
-      Scale="new Vector3(1.2f, 1.2f, 1.2f)" />
-
-   <Mesh Position="new Vector3(-1.6f, 0f, 0f)" ClassName="stage-active">
+   <Mesh Position="new Vector3(-1.6f, 0f, 0f)">
+      <Transition Properties="@(new[] { "Position", "Rotation", "Scale" })" DurationMs="1200" Easing="@Easings.EaseOutCubic" />
       <BoxGeometry Width="1.4" Height="1.4" Depth="1.4" />
       <MeshStandardMaterial Color="#15b8a6" />
    </Mesh>
@@ -79,7 +65,7 @@ No service registration is required. `Scene` loads the JavaScript bridge automat
 </Scene>
 ```
 
-Changing a node's `ClassName` at runtime makes BlazorThree animate that node toward the matching `Transition` state.
+Changing a node property such as `Position`, `Rotation`, or `Scale` at runtime animates that property when a matching child `Transition` is present.
 
 ## Scene building blocks
 
@@ -117,11 +103,23 @@ Changing a node's `ClassName` at runtime makes BlazorThree animate that node tow
 
 ### Transitions
 
-Use `Transition` to register a named target state keyed by `ClassName`. Nodes with the same class interpolate toward that state when their class changes.
+Place `Transition` inside `Mesh`, `Group`, or `Model` to animate specific transform properties for that node.
 
+- `Property` can target one property: `Position`, `Rotation`, or `Scale`
+- `Properties` can target multiple properties with one transition definition
 - `DurationMs` controls animation length
 - `Easing` accepts the values from `Easings`
-- `Position`, `Rotation`, and `Scale` are optional, so you can animate only the axes you need
+
+```razor
+<Group Position="@groupPosition" Rotation="@groupRotation">
+   <Transition Properties="@(new[] { "Position", "Rotation" })" DurationMs="800" Easing="@Easings.EaseInOutQuad" />
+
+   <Mesh>
+      <BoxGeometry Width="1" Height="1" Depth="1" />
+      <MeshStandardMaterial Color="#15b8a6" />
+   </Mesh>
+</Group>
+```
 
 ### Timelines
 

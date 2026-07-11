@@ -11,9 +11,15 @@ public class Model : Object3d, IDisposable
 {
     private readonly ModelContext modelContext = new();
 
+    private readonly TransitionHostContext transitionHostContext = new();
+
     private readonly Dictionary<string, BonePoseState> childBonePoses = new(StringComparer.Ordinal);
 
+    private readonly Dictionary<string, TransitionState> transitions = new(StringComparer.Ordinal);
+
     private string availableClipsSignature = string.Empty;
+
+    private bool isDisposed;
 
     /// <summary>
     /// Gets or sets the nested model child components, such as <see cref="BonePose" /> overrides.
@@ -28,7 +34,7 @@ public class Model : Object3d, IDisposable
     public string SourceUrl { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the class name used to match transitions and timeline tracks.
+    /// Gets or sets the class name used to match timeline tracks.
     /// </summary>
     [Parameter]
     public string? ClassName { get; set; }
@@ -88,7 +94,13 @@ public class Model : Object3d, IDisposable
     {
         builder.OpenComponent<CascadingValue<ModelContext>>(0);
         builder.AddAttribute(1, nameof(CascadingValue<ModelContext>.Value), modelContext);
-        builder.AddAttribute(2, nameof(CascadingValue<ModelContext>.ChildContent), ChildContent);
+        builder.AddAttribute(2, nameof(CascadingValue<ModelContext>.ChildContent), (RenderFragment)(childBuilder =>
+        {
+            childBuilder.OpenComponent<CascadingValue<TransitionHostContext>>(0);
+            childBuilder.AddAttribute(1, nameof(CascadingValue<TransitionHostContext>.Value), transitionHostContext);
+            childBuilder.AddAttribute(2, nameof(CascadingValue<TransitionHostContext>.ChildContent), ChildContent);
+            childBuilder.CloseComponent();
+        }));
         builder.CloseComponent();
     }
 
@@ -99,13 +111,47 @@ public class Model : Object3d, IDisposable
     {
         modelContext.UpsertBonePose = (key, pose) =>
         {
+            if (isDisposed)
+            {
+                return;
+            }
+
             childBonePoses[key] = pose;
             Publish();
         };
 
         modelContext.RemoveBonePose = key =>
         {
+            if (isDisposed)
+            {
+                return;
+            }
+
             if (childBonePoses.Remove(key))
+            {
+                Publish();
+            }
+        };
+
+        transitionHostContext.UpsertTransition = transition =>
+        {
+            if (isDisposed)
+            {
+                return;
+            }
+
+            transitions[transition.Property] = transition;
+            Publish();
+        };
+
+        transitionHostContext.RemoveTransition = property =>
+        {
+            if (isDisposed)
+            {
+                return;
+            }
+
+            if (transitions.Remove(property))
             {
                 Publish();
             }
@@ -140,6 +186,11 @@ public class Model : Object3d, IDisposable
 
     private void Publish()
     {
+        if (isDisposed)
+        {
+            return;
+        }
+
         RemovePreviousIfIdChanged(previousId => SceneContext?.RemoveModel(previousId));
 
         var modelId = CurrentId;
@@ -156,6 +207,7 @@ public class Model : Object3d, IDisposable
             ParentId = NodeContainer?.ParentId,
             SourceUrl = SourceUrl,
             ClassName = ClassName,
+            Transitions = transitions.Values.OrderBy(transition => transition.Property, StringComparer.Ordinal).ToArray(),
             Position = Position,
             Rotation = Rotation,
             Scale = Scale,
@@ -224,6 +276,12 @@ public class Model : Object3d, IDisposable
     /// </summary>
     public void Dispose()
     {
+        isDisposed = true;
+        modelContext.UpsertBonePose = null;
+        modelContext.RemoveBonePose = null;
+        transitionHostContext.UpsertTransition = null;
+        transitionHostContext.RemoveTransition = null;
+
         if (SceneContext is not null)
         {
             SceneContext.ModelClipsChanged -= HandleModelClipsChanged;

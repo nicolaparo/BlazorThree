@@ -16,8 +16,6 @@ internal sealed class SceneContext
 
     private readonly Dictionary<string, ModelClipInfo> modelClipInfos = new(StringComparer.Ordinal);
 
-    private readonly Dictionary<string, TransitionState> transitions = new(StringComparer.Ordinal);
-
     private readonly Dictionary<string, TimelineState> timelines = new(StringComparer.Ordinal);
 
     private readonly Dictionary<string, Func<SceneElementMouseEventArgs, Task>> clickHandlers = new(StringComparer.Ordinal);
@@ -41,8 +39,6 @@ internal sealed class SceneContext
     private bool orbitControlsDirty = true;
 
     private bool interactionDirty = true;
-
-    private bool transitionsDirty = true;
 
     private bool timelinesDirty = true;
 
@@ -135,13 +131,6 @@ internal sealed class SceneContext
         }
     }
 
-    public void UpsertTransition(TransitionState state)
-    {
-        transitions[state.ClassName] = state;
-        transitionsDirty = true;
-        Changed?.Invoke();
-    }
-
     public void UpsertTimeline(TimelineState state)
     {
         timelines[state.Name] = state;
@@ -154,15 +143,6 @@ internal sealed class SceneContext
         if (timelines.Remove(name))
         {
             timelinesDirty = true;
-            Changed?.Invoke();
-        }
-    }
-
-    public void RemoveTransition(string className)
-    {
-        if (transitions.Remove(className))
-        {
-            transitionsDirty = true;
             Changed?.Invoke();
         }
     }
@@ -311,8 +291,6 @@ internal sealed class SceneContext
                 DispatchableElementClickKeys = GetDispatchableElementClickKeys(),
                 DispatchableElementMouseEnterKeys = GetDispatchableElementMouseEnterKeys(),
                 DispatchableElementMouseLeaveKeys = GetDispatchableElementMouseLeaveKeys(),
-                TransitionsChanged = true,
-                Transitions = transitions.Values.ToArray(),
                 TimelinesChanged = true,
                 Timelines = timelines.Values.ToArray(),
                 UpsertGroups = groups.Values.ToArray(),
@@ -343,8 +321,6 @@ internal sealed class SceneContext
             DispatchableElementClickKeys = interactionDirty ? GetDispatchableElementClickKeys() : Array.Empty<string>(),
             DispatchableElementMouseEnterKeys = interactionDirty ? GetDispatchableElementMouseEnterKeys() : Array.Empty<string>(),
             DispatchableElementMouseLeaveKeys = interactionDirty ? GetDispatchableElementMouseLeaveKeys() : Array.Empty<string>(),
-            TransitionsChanged = transitionsDirty,
-            Transitions = transitionsDirty ? transitions.Values.ToArray() : Array.Empty<TransitionState>(),
             TimelinesChanged = timelinesDirty,
             Timelines = timelinesDirty ? timelines.Values.ToArray() : Array.Empty<TimelineState>(),
             UpsertGroups = upsertGroups,
@@ -367,7 +343,6 @@ internal sealed class SceneContext
             Light = light,
             OrbitControls = orbitControls,
             Groups = groups.Values.ToArray(),
-            Transitions = transitions.Values.ToArray(),
             Timelines = timelines.Values.ToArray(),
             Meshes = meshes.Values.ToArray(),
             Models = models.Values.ToArray()
@@ -398,7 +373,6 @@ internal sealed class SceneContext
         lightDirty = false;
         orbitControlsDirty = false;
         interactionDirty = false;
-        transitionsDirty = false;
         timelinesDirty = false;
 
         upsertedGroupIds.Clear();

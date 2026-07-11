@@ -13,11 +13,17 @@ public class Mesh : Object3d, IDisposable
 {
     private readonly MeshContext meshContext = new();
 
+    private readonly TransitionHostContext transitionHostContext = new();
+
+    private readonly Dictionary<string, TransitionState> transitions = new(StringComparer.Ordinal);
+
     private GeometryDefinition geometry = new BoxGeometryDefinition();
 
     private MaterialDefinition material = new MeshStandardMaterialDefinition();
 
     private OutlineState? outline;
+
+    private bool isDisposed;
 
     /// <summary>
     /// Gets or sets the nested geometry, material, and optional outline components for the mesh.
@@ -26,7 +32,7 @@ public class Mesh : Object3d, IDisposable
     public RenderFragment? ChildContent { get; set; }
 
     /// <summary>
-    /// Gets or sets the class name used to match transitions and timeline tracks.
+    /// Gets or sets the class name used to match timeline tracks.
     /// </summary>
     [Parameter]
     public string? ClassName { get; set; }
@@ -38,7 +44,13 @@ public class Mesh : Object3d, IDisposable
     {
         builder.OpenComponent<CascadingValue<MeshContext>>(0);
         builder.AddAttribute(1, nameof(CascadingValue<MeshContext>.Value), meshContext);
-        builder.AddAttribute(2, nameof(CascadingValue<MeshContext>.ChildContent), ChildContent);
+        builder.AddAttribute(2, nameof(CascadingValue<MeshContext>.ChildContent), (RenderFragment)(childBuilder =>
+        {
+            childBuilder.OpenComponent<CascadingValue<TransitionHostContext>>(0);
+            childBuilder.AddAttribute(1, nameof(CascadingValue<TransitionHostContext>.Value), transitionHostContext);
+            childBuilder.AddAttribute(2, nameof(CascadingValue<TransitionHostContext>.ChildContent), ChildContent);
+            childBuilder.CloseComponent();
+        }));
         builder.CloseComponent();
     }
 
@@ -49,20 +61,59 @@ public class Mesh : Object3d, IDisposable
     {
         meshContext.SetGeometry = value =>
         {
+            if (isDisposed)
+            {
+                return;
+            }
+
             geometry = value;
             Publish();
         };
 
         meshContext.SetMaterial = value =>
         {
+            if (isDisposed)
+            {
+                return;
+            }
+
             material = value;
             Publish();
         };
 
         meshContext.SetOutline = value =>
         {
+            if (isDisposed)
+            {
+                return;
+            }
+
             outline = value;
             Publish();
+        };
+
+        transitionHostContext.UpsertTransition = transition =>
+        {
+            if (isDisposed)
+            {
+                return;
+            }
+
+            transitions[transition.Property] = transition;
+            Publish();
+        };
+
+        transitionHostContext.RemoveTransition = property =>
+        {
+            if (isDisposed)
+            {
+                return;
+            }
+
+            if (transitions.Remove(property))
+            {
+                Publish();
+            }
         };
     }
 
@@ -76,6 +127,11 @@ public class Mesh : Object3d, IDisposable
 
     private void Publish()
     {
+        if (isDisposed)
+        {
+            return;
+        }
+
         RemovePreviousIfIdChanged(previousId => SceneContext?.RemoveMesh(previousId));
 
         var meshId = CurrentId;
@@ -94,6 +150,7 @@ public class Mesh : Object3d, IDisposable
             Material = material,
             Outline = outline,
             ClassName = ClassName,
+            Transitions = transitions.Values.OrderBy(transition => transition.Property, StringComparer.Ordinal).ToArray(),
             Position = Position,
             Rotation = Rotation,
             Scale = Scale
@@ -107,6 +164,13 @@ public class Mesh : Object3d, IDisposable
     /// </summary>
     public void Dispose()
     {
+        isDisposed = true;
+        meshContext.SetGeometry = null;
+        meshContext.SetMaterial = null;
+        meshContext.SetOutline = null;
+        transitionHostContext.UpsertTransition = null;
+        transitionHostContext.RemoveTransition = null;
+
         var meshId = GetDisposeId();
         SceneContext?.RemoveMesh(meshId);
     }
