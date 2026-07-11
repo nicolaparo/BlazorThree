@@ -205,6 +205,8 @@ function evaluateAnimatedState(targetState, channels, timestamp) {
 }
 
 function applyMeshVisualStates(state, record, geometryState, materialState, outlineState) {
+    let geometryChanged = false;
+
     const nextGeometrySignature = signature(geometryState);
     if (record.geometrySignature !== nextGeometrySignature) {
         const geometryUpdatedInPlace = applyGeometryStateInPlace(record, geometryState);
@@ -216,6 +218,7 @@ function applyMeshVisualStates(state, record, geometryState, materialState, outl
         }
 
         record.geometrySignature = nextGeometrySignature;
+        geometryChanged = true;
     }
 
     const nextMaterialSignature = signature(materialState);
@@ -231,8 +234,9 @@ function applyMeshVisualStates(state, record, geometryState, materialState, outl
     }
 
     const nextOutlineSignature = signature(outlineState);
-    if (record.outlineSignature !== nextOutlineSignature) {
-        const outlineUpdatedInPlace = applyOutlineStateInPlace(record, outlineState);
+    const shouldRebuildOutline = geometryChanged && !!outlineState;
+    if (record.outlineSignature !== nextOutlineSignature || shouldRebuildOutline) {
+        const outlineUpdatedInPlace = !shouldRebuildOutline && applyOutlineStateInPlace(record, outlineState);
         if (!outlineUpdatedInPlace) {
             applyOutline(record, outlineState);
         }
