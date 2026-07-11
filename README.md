@@ -2,6 +2,8 @@
 
 BlazorThree is a .NET 10 Razor Class Library for building Three.js scenes with declarative Blazor components. You compose a scene graph in Razor, and the library keeps a browser-side Three.js runtime synchronized for rendering, animation, model playback, and scene interaction.
 
+![BlazorThree demo](demo-1.png)
+
 ## Why BlazorThree
 
 BlazorThree exists for developers that want scene composition and scene state management to live entirely in Blazor components.
