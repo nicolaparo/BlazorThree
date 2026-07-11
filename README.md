@@ -2,6 +2,18 @@
 
 BlazorThree is a .NET 10 Razor Class Library for building Three.js scenes with declarative Blazor components. You compose a scene graph in Razor, and the library keeps a browser-side Three.js runtime synchronized for rendering, animation, model playback, and scene interaction.
 
+## Why BlazorThree
+
+BlazorThree exists for developers that want scene composition and scene state management to live entirely in Blazor components.
+
+Compared to other libraries, BlazorThree centers the component model as the primary authoring experience:
+
+- Scene graph structure is expressed directly in Razor (`Scene`, `Group`, `Mesh`, `Model`, and children)
+- Scene changes come from normal Blazor state updates instead of manually orchestrating an imperative scene lifecycle
+- Behaviors like transforms, transitions, materials, outlines, and interaction handlers remain colocated with each node in component markup
+
+The goal is predictable, maintainable 3D UI composition for Blazor-first applications.
+
 ## Preview status
 
 BlazorThree is still a preview feature. The API surface, runtime behavior, packaging details, and documentation may change before a stable release.
@@ -11,7 +23,6 @@ BlazorThree is still a preview feature. The API surface, runtime behavior, packa
 - Declarative scene composition with `Scene`, `Camera`, `Light`, `Group`, `Mesh`, and `Model`
 - Nested transform hierarchies with shared position, rotation, and scale primitives
 - Per-node property transitions for state changes
-- Keyframed timelines for continuous animation
 - Model loading for `.glb`, `.gltf`, `.fbx`, and `.dae`
 - Model clip discovery, playback, looping, scrubbing, and blend control
 - Per-bone pose overrides through `BonePose` or `BonePoses`
@@ -45,24 +56,40 @@ No service registration is required. `Scene` loads the JavaScript bridge automat
 
 ```razor
 <Scene Width="100%" Height="520px" ClearColor="#101925">
-   <Camera Fov="65" Position="new Vector3(0f, 1.4f, 7f)" />
-   <Light
-      Type="LightDefinitions.Directional"
-      Intensity="1.6"
-      Position="new Vector3(6f, 8f, 3f)" />
+   <Camera Fov="65" Position="@(new(0f, 1.4f, 7f))" />
+   <Light Type="LightDefinitions.Directional" Intensity="1.6" Position="@(new(6f, 8f, 3f))" />
    <OrbitControls Enabled="true" EnableDamping="true" DampingFactor="0.09" />
 
-   <Mesh Position="new Vector3(-1.6f, 0f, 0f)">
-      <Transition Properties="@(new[] { "Position", "Rotation", "Scale" })" DurationMs="1200" Easing="@Easings.EaseOutCubic" />
-      <BoxGeometry Width="1.4" Height="1.4" Depth="1.4" />
-      <MeshStandardMaterial Color="#15b8a6" />
-   </Mesh>
+   <Group Position="@(stageActive ? new(0f, 0.9f, 0f) : Vector3.Zero)"
+          Rotation="@(stageActive ? new(0f, 1.8f, 0f) : Vector3.Zero)"
+          Scale="@(stageActive ? new(-1f, -1f, -1f) : Vector3.One)">
+      <Transition Properties="@([nameof(Group.Position), nameof(Group.Rotation), nameof(Group.Scale)])"
+                  DurationMs="1200"
+                  Easing="@Easings.EaseInOutQuad" />
 
-   <Mesh Position="new Vector3(1.7f, 0.1f, 0f)">
-      <SphereGeometry Radius="0.9" WidthSegments="48" HeightSegments="24" />
-      <MeshStandardMaterial TextureUrl="https://threejs.org/examples/textures/uv_grid_opengl.jpg" />
+      <Mesh Position="@(new(-1.7f, 0.1f, 0f))">
+         <BoxGeometry Width="1" Height="1" Depth="1" />
+         <MeshStandardMaterial Color="#f5f500" Metalness="0.05" Roughness="0.55" />
+      </Mesh>
+
+      <Mesh Position="@(new Vector3(1.7f, 0.1f, 0f))">
+         <SphereGeometry Radius="0.9" WidthSegments="48" HeightSegments="24" />
+         <MeshStandardMaterial Color="#ffffff"
+                               TextureUrl="https://threejs.org/examples/textures/uv_grid_opengl.jpg"
+                               Metalness="0.05"
+                               Roughness="0.55" />
+      </Mesh>
+   </Group>
+
+   <Mesh Position="@(new Vector3(0f, -1.5f, 0f))">
+      <BoxGeometry Width="6" Height="0.18" Depth="3" />
+      <MeshStandardMaterial Color="#6ca0ff" Metalness="0.15" Roughness="0.9" />
    </Mesh>
 </Scene>
+
+@code {
+   private bool stageActive;
+}
 ```
 
 Changing a node property such as `Position`, `Rotation`, or `Scale` at runtime animates that property when a matching child `Transition` is present.
@@ -99,7 +126,7 @@ Changing a node property such as `Position`, `Rotation`, or `Scale` at runtime a
 </Group>
 ```
 
-## Animation systems
+## Animation
 
 ### Transitions
 
@@ -120,22 +147,6 @@ Place `Transition` inside `Mesh`, `Group`, or `Model` to animate specific transf
    </Mesh>
 </Group>
 ```
-
-### Timelines
-
-Use `Timeline`, `TimelineTrack`, and `TimelineKeyframe` for continuous animation driven by a time cursor.
-
-```razor
-<Timeline Name="hover" IsActive="true" Loop="true" CurrentTimeMs="@timeMs">
-   <TimelineTrack ClassName="orbiter" Easing="@Easings.EaseInOutQuad">
-      <TimelineKeyframe TimeMs="0" Position="new Vector3(-0.6f, 0f, 0f)" Rotation="Vector3.Zero" />
-      <TimelineKeyframe TimeMs="1000" Position="new Vector3(0.6f, 0f, 0f)" Rotation="new Vector3(0f, 1.2f, 0f)" />
-      <TimelineKeyframe TimeMs="2000" Position="new Vector3(-0.6f, 0f, 0f)" Rotation="new Vector3(0f, 2.4f, 0f)" />
-   </TimelineTrack>
-</Timeline>
-```
-
-Each track targets a scene `ClassName`, which lets you animate multiple nodes with the same authored motion.
 
 ## Models, clips, and bones
 
@@ -238,7 +249,7 @@ Then open the local URL printed by ASP.NET Core.
 The repository contains:
 
 - `BlazorThree`: the reusable component library
-- `BlazorThree.Demo`: a sample Blazor app showing scene composition, animation, models, and interaction
+- `BlazorThree.Demo`: a sample Blazor app showing working scene composition, transitions, models, and interaction
 
 The demo reflects the current preview feature set and is not a statement of stable API guarantees.
 
