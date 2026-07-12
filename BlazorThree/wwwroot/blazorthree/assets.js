@@ -120,23 +120,23 @@ function updateCameraFromChannels(state, timestamp) {
     state.camera.updateProjectionMatrix();
 }
 
-function updateLightFromChannels(state, timestamp) {
-    if (!state.lightChannels.length || !state.light) {
+function updateLightFromChannels(record, timestamp) {
+    if (!record.channels.length || !record.light) {
         return;
     }
 
     const activeChannels = [];
-    for (const channel of state.lightChannels) {
+    for (const channel of record.channels) {
         const raw = Math.min(1, Math.max(0, (timestamp - channel.start) / Math.max(1, channel.duration)));
         const t = ease(raw, channel.easing || "linear");
         const nextValue = interpolateValue(channel.from, channel.to, t);
 
-        if (channel.path === "intensity" && state.light.intensity !== undefined) {
-            state.light.intensity = nextValue;
-        } else if (channel.path === "color" && state.light.color) {
-            state.light.color.set(nextValue);
-        } else if (channel.path === "position" && state.light.position) {
-            state.light.position.set(nextValue.x, nextValue.y, nextValue.z);
+        if (channel.path === "intensity" && record.light.intensity !== undefined) {
+            record.light.intensity = nextValue;
+        } else if (channel.path === "color" && record.light.color) {
+            record.light.color.set(nextValue);
+        } else if (channel.path === "position" && record.light.position) {
+            record.light.position.set(nextValue.x, nextValue.y, nextValue.z);
         }
 
         if (raw < 1) {
@@ -144,7 +144,7 @@ function updateLightFromChannels(state, timestamp) {
         }
     }
 
-    state.lightChannels = activeChannels;
+    record.channels = activeChannels;
 }
 
 export function updateCameraAnimation(state, timestamp) {
@@ -152,7 +152,9 @@ export function updateCameraAnimation(state, timestamp) {
 }
 
 export function updateLightAnimation(state, timestamp) {
-    updateLightFromChannels(state, timestamp);
+    for (const record of state.lights.values()) {
+        updateLightFromChannels(record, timestamp);
+    }
 }
 
 function readVector2Array(rawPoints, fallback) {
@@ -628,26 +630,22 @@ export function ensureCamera(state, cameraState) {
     state.cameraSignature = cameraSignature;
 }
 
-export function ensureLight(state, lightState) {
+export function ensureLight(record, lightState) {
     const typeState = value(lightState, "type", "Type", {});
     const type = value(typeState, "kind", "Kind", "directional");
+    const previousLight = record.light;
 
-    if (!state.light || state.lightKind !== type) {
-        if (state.light) {
-            state.scene.remove(state.light);
-        }
-
-        state.light = buildLight(lightState);
-        state.lightKind = type;
-        state.lightChannels = [];
-        state.scene.add(state.light);
-        state.lightSignature = signature(lightState);
-        return;
+    if (!record.light || record.kind !== type) {
+        record.light = buildLight(lightState);
+        record.kind = type;
+        record.channels = [];
+        record.signature = signature(lightState);
+        return previousLight;
     }
 
     const lightSignature = signature(lightState);
-    if (state.lightSignature === lightSignature) {
-        return;
+    if (record.signature === lightSignature) {
+        return null;
     }
 
     const transitions = buildTransitionMap(lightState);
@@ -659,22 +657,22 @@ export function ensureLight(state, lightState) {
 
     const colorTransition = transitions.get("color");
     if (colorTransition) {
-        const channel = buildChannel("color", colorTransition, `#${state.light.color.getHexString()}`, color);
+        const channel = buildChannel("color", colorTransition, `#${record.light.color.getHexString()}`, color);
         if (channel) {
             channels.push(channel);
         }
-    } else if (state.light.color) {
-        state.light.color.set(color);
+    } else if (record.light.color) {
+        record.light.color.set(color);
     }
 
     const intensityTransition = transitions.get("intensity");
     if (intensityTransition) {
-        const channel = buildChannel("intensity", intensityTransition, state.light.intensity, intensity);
+        const channel = buildChannel("intensity", intensityTransition, record.light.intensity, intensity);
         if (channel) {
             channels.push(channel);
         }
-    } else if (state.light.intensity !== undefined) {
-        state.light.intensity = intensity;
+    } else if (record.light.intensity !== undefined) {
+        record.light.intensity = intensity;
     }
 
     const positionTransition = transitions.get("position");
@@ -682,17 +680,17 @@ export function ensureLight(state, lightState) {
         const channel = buildChannel(
             "position",
             positionTransition,
-            { x: state.light.position.x, y: state.light.position.y, z: state.light.position.z },
+            { x: record.light.position.x, y: record.light.position.y, z: record.light.position.z },
             position
         );
         if (channel) {
             channels.push(channel);
         }
-    } else if (state.light.position) {
-        state.light.position.set(position.x, position.y, position.z);
+    } else if (record.light.position) {
+        record.light.position.set(position.x, position.y, position.z);
     }
 
-    state.lightChannels = channels;
-
-    state.lightSignature = lightSignature;
+    record.channels = channels;
+    record.signature = lightSignature;
+    return null;
 }

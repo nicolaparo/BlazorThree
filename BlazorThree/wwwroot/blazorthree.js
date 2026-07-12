@@ -199,6 +199,71 @@ function render(state) {
     state.renderer.render(state.scene, state.camera);
 }
 
+function tryGetLightId(lightState) {
+    const rawId = value(lightState, "id", "Id", null);
+    if (rawId === null || rawId === undefined) {
+        return null;
+    }
+
+    const normalized = String(rawId).trim();
+    return normalized.length > 0 ? normalized : null;
+}
+
+function removeLightRecord(state, lightId) {
+    const record = state.lights.get(lightId);
+    if (!record) {
+        return;
+    }
+
+    if (record.light) {
+        state.scene.remove(record.light);
+    }
+
+    state.lights.delete(lightId);
+}
+
+function upsertLightRecord(state, lightState) {
+    const lightId = tryGetLightId(lightState);
+    if (!lightId) {
+        return null;
+    }
+
+    let record = state.lights.get(lightId);
+    if (!record) {
+        record = {
+            light: null,
+            kind: null,
+            signature: "",
+            channels: []
+        };
+        state.lights.set(lightId, record);
+    }
+
+    const previousLight = record.light;
+    const replacedLight = ensureLight(record, lightState);
+    if (replacedLight && replacedLight !== record.light) {
+        state.scene.remove(replacedLight);
+    }
+
+    if (record.light && record.light !== previousLight) {
+        state.scene.add(record.light);
+    }
+
+    return lightId;
+}
+
+function syncLights(state, lightStates) {
+    const liveLightIds = new Set();
+    for (const lightState of lightStates) {
+        const lightId = upsertLightRecord(state, lightState);
+        if (lightId) {
+            liveLightIds.add(lightId);
+        }
+    }
+
+    return liveLightIds;
+}
+
 export function initScene(hostElement, options, dotNetRef) {
     const sceneId = crypto.randomUUID();
     const clearColor = value(options, "clearColor", "ClearColor", "#0d1117");
@@ -222,7 +287,7 @@ export function initScene(hostElement, options, dotNetRef) {
         interactionSubscriptions: { click: false, mouseEnter: false, mouseLeave: false },
         interactionTargets: { click: new Set(), mouseEnter: new Set(), mouseLeave: new Set() },
         camera: buildCamera(null, hostElement),
-        light: null,
+        lights: new Map(),
         orbitControls: null,
         orbitControlsState: { enabled: false, enableDamping: true, dampingFactor: 0.08 },
         textureLoader: new THREE.TextureLoader(),
@@ -234,9 +299,6 @@ export function initScene(hostElement, options, dotNetRef) {
         timelinePlayback: new Map(),
         cameraSignature: "",
         cameraChannels: [],
-        lightSignature: "",
-        lightKind: null,
-        lightChannels: [],
         frameHandle: 0,
         resizeObserver: null,
         dotNetRef,
@@ -345,10 +407,23 @@ export function syncScene(sceneId, graph) {
         state.orbitControls.object = state.camera;
     }
 
-    const lightChanged = isFull || value(graph, "lightChanged", "LightChanged", false);
-    if (lightChanged) {
-        const lightState = value(graph, "light", "Light", {});
-        ensureLight(state, lightState);
+    const lightsChanged = isFull || value(graph, "lightsChanged", "LightsChanged", false);
+    if (lightsChanged) {
+        const upsertLightStates = value(graph, "upsertLights", "UpsertLights", []);
+        const liveLightIds = syncLights(state, upsertLightStates);
+
+        if (isFull) {
+            for (const lightId of state.lights.keys()) {
+                if (!liveLightIds.has(lightId)) {
+                    removeLightRecord(state, lightId);
+                }
+            }
+        } else {
+            const removeLightIds = value(graph, "removeLightIds", "RemoveLightIds", []);
+            for (const lightId of removeLightIds) {
+                removeLightRecord(state, lightId);
+            }
+        }
     }
 
     const orbitControlsChanged = isFull || value(graph, "orbitControlsChanged", "OrbitControlsChanged", false);
@@ -490,8 +565,8 @@ export function disposeScene(sceneId) {
         state.orbitControls = null;
     }
 
-    if (state.light) {
-        state.scene.remove(state.light);
+    for (const lightId of state.lights.keys()) {
+        removeLightRecord(state, lightId);
     }
 
     state.renderer.dispose();

@@ -20,15 +20,17 @@ internal sealed class SceneDeltaState
 
     public CameraState? Camera { get; init; }
     /// <summary>
-    /// Gets or sets the light changed.
+    /// Gets or sets whether any scene light state changed.
     /// </summary>
-
-    public bool LightChanged { get; init; }
+    public bool LightsChanged { get; init; }
     /// <summary>
-    /// Gets or sets the light.
+    /// Gets or sets light states that should be upserted.
     /// </summary>
-
-    public LightState? Light { get; init; }
+    public IReadOnlyList<LightState> UpsertLights { get; init; } = Array.Empty<LightState>();
+    /// <summary>
+    /// Gets or sets light identifiers that should be removed.
+    /// </summary>
+    public IReadOnlyCollection<string> RemoveLightIds { get; init; } = Array.Empty<string>();
     /// <summary>
     /// Gets or sets the orbit controls changed.
     /// </summary>
@@ -118,7 +120,9 @@ internal sealed class SceneDeltaState
     public bool HasChanges =>
         IsFull
         || CameraChanged
-        || LightChanged
+        || LightsChanged
+        || UpsertLights.Count > 0
+        || RemoveLightIds.Count > 0
         || OrbitControlsChanged
         || InteractionChanged
         || TimelinesChanged

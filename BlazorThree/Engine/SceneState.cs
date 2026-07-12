@@ -10,10 +10,9 @@ internal sealed class SceneState
     /// </summary>
     public CameraState Camera { get; set; } = new();
     /// <summary>
-    /// Gets or sets the light.
+    /// Gets or sets the lights.
     /// </summary>
-
-    public LightState Light { get; set; } = new();
+    public IReadOnlyList<LightState> Lights { get; set; } = Array.Empty<LightState>();
     /// <summary>
     /// Gets or sets the orbit controls.
     /// </summary>

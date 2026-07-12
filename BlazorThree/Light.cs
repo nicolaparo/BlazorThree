@@ -8,11 +8,17 @@ namespace BlazorThree;
 /// <summary>
 /// Publishes a single scene light using one of the built-in <see cref="Engine.LightDefinitions" /> presets.
 /// </summary>
-public class Light : ComponentBase, IPositionable
+public class Light : ComponentBase, IPositionable, IDisposable
 {
+    private readonly string generatedId = Guid.NewGuid().ToString("N");
+
     private readonly TransitionHostContext transitionHostContext = new();
 
     private readonly Dictionary<string, TransitionState> transitions = new(StringComparer.Ordinal);
+
+    private string? lastPublishedId;
+
+    private bool isDisposed;
     /// <summary>
     /// Gets or sets the scene context.
     /// </summary>
@@ -25,6 +31,12 @@ public class Light : ComponentBase, IPositionable
     /// </summary>
     [Parameter]
     public LightDefinition Type { get; set; } = LightDefinitions.Directional;
+
+    /// <summary>
+    /// Gets or sets the stable scene light identifier. When omitted, a generated identifier is used.
+    /// </summary>
+    [Parameter]
+    public string? Id { get; set; }
 
     /// <summary>
     /// Gets or sets the light color as a CSS-compatible color string.
@@ -98,13 +110,42 @@ public class Light : ComponentBase, IPositionable
 
     private void Publish()
     {
-        SceneContext?.SetLight(new LightState
+        if (isDisposed)
         {
+            return;
+        }
+
+        var lightId = CurrentId;
+
+        if (!string.IsNullOrEmpty(lastPublishedId) && !string.Equals(lastPublishedId, lightId, StringComparison.Ordinal))
+        {
+            SceneContext?.RemoveLight(lastPublishedId);
+        }
+
+        SceneContext?.UpsertLight(new LightState
+        {
+            Id = lightId,
             Type = Type,
             Color = Color,
             Intensity = Intensity,
             Position = Position,
             Transitions = transitions.Values.OrderBy(transition => transition.Property, StringComparer.Ordinal).ToArray()
         });
+
+        lastPublishedId = lightId;
     }
+
+    /// <summary>
+    /// Removes the light from the owning scene when the component is disposed.
+    /// </summary>
+    public void Dispose()
+    {
+        isDisposed = true;
+        transitionHostContext.UpsertTransition = null;
+        transitionHostContext.RemoveTransition = null;
+
+        SceneContext?.RemoveLight(lastPublishedId ?? CurrentId);
+    }
+
+    private string CurrentId => string.IsNullOrWhiteSpace(Id) ? generatedId : Id;
 }

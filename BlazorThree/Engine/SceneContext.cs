@@ -29,7 +29,7 @@ internal sealed class SceneContext
 
     private CameraState camera = new();
 
-    private LightState light = new();
+    private readonly Dictionary<string, LightState> lights = new(StringComparer.Ordinal);
 
     private OrbitControlsState orbitControls = new();
 
@@ -37,7 +37,7 @@ internal sealed class SceneContext
 
     private bool cameraDirty = true;
 
-    private bool lightDirty = true;
+    private bool lightsDirty = true;
 
     private bool orbitControlsDirty = true;
 
@@ -56,6 +56,10 @@ internal sealed class SceneContext
     private readonly HashSet<string> upsertedModelIds = new(StringComparer.Ordinal);
 
     private readonly HashSet<string> removedModelIds = new(StringComparer.Ordinal);
+
+    private readonly HashSet<string> upsertedLightIds = new(StringComparer.Ordinal);
+
+    private readonly HashSet<string> removedLightIds = new(StringComparer.Ordinal);
 
     public bool HasElementClickHandlers => clickHandlers.Count > 0;
 
@@ -80,11 +84,24 @@ internal sealed class SceneContext
         Changed?.Invoke();
     }
 
-    public void SetLight(LightState state)
+    public void UpsertLight(LightState state)
     {
-        light = state;
-        lightDirty = true;
+        lights[state.Id] = state;
+        upsertedLightIds.Add(state.Id);
+        removedLightIds.Remove(state.Id);
+        lightsDirty = true;
         Changed?.Invoke();
+    }
+
+    public void RemoveLight(string id)
+    {
+        if (lights.Remove(id))
+        {
+            upsertedLightIds.Remove(id);
+            removedLightIds.Add(id);
+            lightsDirty = true;
+            Changed?.Invoke();
+        }
     }
 
     public void SetOrbitControls(OrbitControlsState state)
@@ -283,8 +300,8 @@ internal sealed class SceneContext
                 IsFull = true,
                 CameraChanged = true,
                 Camera = camera,
-                LightChanged = true,
-                Light = light,
+                LightsChanged = true,
+                UpsertLights = lights.Values.ToArray(),
                 OrbitControlsChanged = true,
                 OrbitControls = orbitControls,
                 InteractionChanged = true,
@@ -313,8 +330,9 @@ internal sealed class SceneContext
         {
             CameraChanged = cameraDirty,
             Camera = cameraDirty ? camera : null,
-            LightChanged = lightDirty,
-            Light = lightDirty ? light : null,
+            LightsChanged = lightsDirty,
+            UpsertLights = lightsDirty ? ToUpsertStates(lights, upsertedLightIds) : Array.Empty<LightState>(),
+            RemoveLightIds = removedLightIds.ToArray(),
             OrbitControlsChanged = orbitControlsDirty,
             OrbitControls = orbitControlsDirty ? orbitControls : null,
             InteractionChanged = interactionDirty,
@@ -343,7 +361,7 @@ internal sealed class SceneContext
         return new SceneState
         {
             Camera = camera,
-            Light = light,
+            Lights = lights.Values.ToArray(),
             OrbitControls = orbitControls,
             Groups = groups.Values.ToArray(),
             Timelines = timelines.Values.ToArray(),
@@ -373,7 +391,7 @@ internal sealed class SceneContext
     private void ResetDirtyTracking()
     {
         cameraDirty = false;
-        lightDirty = false;
+        lightsDirty = false;
         orbitControlsDirty = false;
         interactionDirty = false;
         timelinesDirty = false;
@@ -384,6 +402,8 @@ internal sealed class SceneContext
         removedMeshIds.Clear();
         upsertedModelIds.Clear();
         removedModelIds.Clear();
+        upsertedLightIds.Clear();
+        removedLightIds.Clear();
     }
 
     private Task DispatchWithGroupBubblingAsync(

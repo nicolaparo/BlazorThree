@@ -280,22 +280,22 @@ public partial class Scene
                     rotation = ToJsVector(delta.Camera.Rotation)
                 }
                 : null,
-            lightChanged = delta.LightChanged,
-            light = delta.LightChanged && delta.Light is not null
-                ? new
+            lightsChanged = delta.LightsChanged,
+            upsertLights = delta.UpsertLights.Select(light => new
+            {
+                id = light.Id,
+                type = light.Type,
+                color = light.Color,
+                intensity = light.Intensity,
+                transitions = light.Transitions.Select(transition => new
                 {
-                    type = delta.Light.Type,
-                    color = delta.Light.Color,
-                    intensity = delta.Light.Intensity,
-                    transitions = delta.Light.Transitions.Select(transition => new
-                    {
-                        property = transition.Property,
-                        durationMs = transition.DurationMs,
-                        easing = transition.Easing
-                    }),
-                    position = ToJsVector(delta.Light.Position)
-                }
-                : null,
+                    property = transition.Property,
+                    durationMs = transition.DurationMs,
+                    easing = transition.Easing
+                }),
+                position = ToJsVector(light.Position)
+            }),
+            removeLightIds = delta.RemoveLightIds,
             orbitControlsChanged = delta.OrbitControlsChanged,
             orbitControls = delta.OrbitControlsChanged ? delta.OrbitControls : null,
             timelinesChanged = delta.TimelinesChanged,

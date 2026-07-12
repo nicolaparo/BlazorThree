@@ -1,0 +1,60 @@
+﻿@page "/solar-system"
+@using BlazorThree.Engine
+@rendermode InteractiveServer
+
+<PageTitle>BlazorThree Demo</PageTitle>
+
+<Scene Width="100%" Height="100%" ClearColor="#101925">
+    <Camera Fov="65" Position="new(0, 0, 200)" />
+    <Light Type="LightDefinitions.Ambient" Color="#ffffff" Intensity="0.2" />
+    <OrbitControls Enabled="true" EnableDamping="true" DampingFactor="0.09" />
+
+    @foreach (var (index, planet) in solarSystem.Index())
+    {
+        // place the planets in a line for now, just to show them all.
+        // we need to consider the different sizes of the planets to show them next to each other.
+        var position = new Vector3(index * 100, 0, 0);
+
+        // for sun only, we want to emit light, so we add a point light to the sun.
+        if (planet.Name == "Sun")
+        {
+            <Light Type="LightDefinitions.Point" Position="@position" Color="#ffd280" Intensity="1200000" />
+        }
+
+        <Mesh Position="@position">
+            <SphereGeometry Radius="@(MathF.Sqrt(planet.RadiusKm / 100))" WidthSegments="48" HeightSegments="48" />
+         @*    @if (planet.Name == "Sun")
+            {
+                <MeshPhongMaterial TextureUrl="@Assets[planet.TextureUri]"
+                                   Color="#ffffff"
+                                   Emissive="#ffb347"
+                                   Specular="#221100"
+                                   Shininess="8" />
+            }
+            else
+            { *@
+                <MeshStandardMaterial TextureUrl="@Assets[planet.TextureUri]" Color="#ffffff" />
+            @* } *@
+        </Mesh>
+    }
+
+</Scene>
+
+@code {
+
+    public record PlanetInfo(string Name, string TextureUri, float RadiusKm);
+
+    private IReadOnlySet<PlanetInfo> solarSystem = new HashSet<PlanetInfo>()
+    {
+        new PlanetInfo("Sun", "/textures/solar-system/2k_sun.jpg", 696_340),
+        new PlanetInfo("Mercury", "/textures/solar-system/2k_mercury.jpg", 2_439),
+        new PlanetInfo("Venus", "/textures/solar-system/2k_venus_surface.jpg", 6_052),
+        new PlanetInfo("Earth", "/textures/solar-system/2k_earth_daymap.jpg", 6_371),
+        new PlanetInfo("Mars", "/textures/solar-system/2k_mars.jpg", 3_390),
+        new PlanetInfo("Jupiter", "/textures/solar-system/2k_jupiter.jpg", 69_911),
+        new PlanetInfo("Saturn", "/textures/solar-system/2k_saturn.jpg", 58_232),
+        new PlanetInfo("Uranus", "/textures/solar-system/2k_uranus.jpg", 25_362),
+        new PlanetInfo("Neptune", "/textures/solar-system/2k_neptune.jpg", 24_622),
+    };
+
+}

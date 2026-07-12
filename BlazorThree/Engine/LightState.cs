@@ -8,6 +8,11 @@ namespace BlazorThree.Engine;
 internal sealed class LightState : IPositionable
 {
     /// <summary>
+    /// Gets or sets the stable light identifier.
+    /// </summary>
+    public string Id { get; set; } = Guid.NewGuid().ToString("N");
+
+    /// <summary>
     /// Gets or sets the type.
     /// </summary>
     public LightDefinition Type { get; set; } = LightDefinitions.Directional;
