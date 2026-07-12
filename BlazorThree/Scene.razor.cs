@@ -50,6 +50,18 @@ public partial class Scene
     public string ClearColor { get; set; } = "#0d1117";
 
     /// <summary>
+    /// Gets or sets an optional texture URL used as the scene background.
+    /// </summary>
+    [Parameter]
+    public string? BackgroundTextureUrl { get; set; }
+
+    /// <summary>
+    /// Gets or sets background texture sizing behavior. Supported values: stretch, cover, fixed.
+    /// </summary>
+    [Parameter]
+    public string BackgroundTextureSizing { get; set; } = "cover";
+
+    /// <summary>
     /// Gets or sets the debounce window, in milliseconds, used to batch scene synchronization updates.
     /// </summary>
     [Parameter]
@@ -105,7 +117,16 @@ public partial class Scene
 
         module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/BlazorThree/blazorthree.js");
         dotNetReference = DotNetObjectReference.Create(this);
-        sceneId = await module.InvokeAsync<string>("initScene", hostElement, new { clearColor = ClearColor }, dotNetReference);
+        sceneId = await module.InvokeAsync<string>(
+            "initScene",
+            hostElement,
+            new
+            {
+                clearColor = ClearColor,
+                backgroundTextureUrl = BackgroundTextureUrl,
+                backgroundTextureSizing = BackgroundTextureSizing
+            },
+            dotNetReference);
         await SyncSceneAsync(forceFull: true);
     }
 
@@ -153,6 +174,54 @@ public partial class Scene
     public Task OnSceneElementMouseLeave(string elementId, string elementType)
     {
         return sceneContext.DispatchElementMouseLeaveAsync(elementId, elementType);
+    }
+
+    /// <summary>
+    /// Dispatches an animation-start event from the JavaScript runtime.
+    /// </summary>
+    [JSInvokable]
+    public Task OnAnimationStarted(string animationId, string? name, double currentTimeMs, double progress, int iteration)
+    {
+        return sceneContext.DispatchAnimationStartAsync(new AnimationEventArgs
+        {
+            AnimationId = animationId,
+            Name = name,
+            CurrentTimeMs = currentTimeMs,
+            Progress = progress,
+            Iteration = iteration
+        });
+    }
+
+    /// <summary>
+    /// Dispatches an animation-update event from the JavaScript runtime.
+    /// </summary>
+    [JSInvokable]
+    public Task OnAnimationUpdated(string animationId, string? name, double currentTimeMs, double progress, int iteration)
+    {
+        return sceneContext.DispatchAnimationUpdateAsync(new AnimationEventArgs
+        {
+            AnimationId = animationId,
+            Name = name,
+            CurrentTimeMs = currentTimeMs,
+            Progress = progress,
+            Iteration = iteration
+        });
+    }
+
+    /// <summary>
+    /// Dispatches an animation-end event from the JavaScript runtime.
+    /// </summary>
+    [JSInvokable]
+    public Task OnAnimationEnded(string animationId, string? name, double currentTimeMs, double progress, int iteration)
+    {
+        return sceneContext.DispatchAnimationEndAsync(new AnimationEventArgs
+        {
+            AnimationId = animationId,
+            Name = name,
+            CurrentTimeMs = currentTimeMs,
+            Progress = progress,
+            Iteration = iteration
+        });
     }
 
     private void HandleSceneChanged()
@@ -276,8 +345,27 @@ public partial class Scene
                         durationMs = transition.DurationMs,
                         easing = transition.Easing
                     }),
+                    animations = delta.Camera.Animations.Select(animation => new
+                    {
+                        id = animation.Id,
+                        name = animation.Name,
+                        durationMs = animation.DurationMs,
+                        active = animation.Active,
+                        loop = animation.Loop,
+                        easing = animation.Easing,
+                        keyframes = animation.Keyframes.Select(keyframe => new
+                        {
+                            id = keyframe.Id,
+                            property = keyframe.Property,
+                            offset = keyframe.Offset,
+                            value = keyframe.Value,
+                            easing = keyframe.Easing
+                        })
+                    }),
                     position = ToJsVector(delta.Camera.Position),
-                    rotation = ToJsVector(delta.Camera.Rotation)
+                    rotation = ToJsVector(delta.Camera.Rotation),
+                    up = ToJsVector(delta.Camera.Up),
+                    lookAt = ToJsVector(delta.Camera.LookAt)
                 }
                 : null,
             lightsChanged = delta.LightsChanged,
@@ -293,35 +381,28 @@ public partial class Scene
                     durationMs = transition.DurationMs,
                     easing = transition.Easing
                 }),
+                animations = light.Animations.Select(animation => new
+                {
+                    id = animation.Id,
+                    name = animation.Name,
+                    durationMs = animation.DurationMs,
+                    active = animation.Active,
+                    loop = animation.Loop,
+                    easing = animation.Easing,
+                    keyframes = animation.Keyframes.Select(keyframe => new
+                    {
+                        id = keyframe.Id,
+                        property = keyframe.Property,
+                        offset = keyframe.Offset,
+                        value = keyframe.Value,
+                        easing = keyframe.Easing
+                    })
+                }),
                 position = ToJsVector(light.Position)
             }),
             removeLightIds = delta.RemoveLightIds,
             orbitControlsChanged = delta.OrbitControlsChanged,
             orbitControls = delta.OrbitControlsChanged ? delta.OrbitControls : null,
-            timelinesChanged = delta.TimelinesChanged,
-            timelines = delta.TimelinesChanged
-                ? delta.Timelines.Select(timeline => new
-                {
-                    name = timeline.Name,
-                    isActive = timeline.IsActive,
-                    loop = timeline.Loop,
-                    currentTimeMs = timeline.CurrentTimeMs,
-                    tracks = timeline.Tracks.Select(track => new
-                    {
-                        id = track.Id,
-                        className = track.ClassName,
-                        easing = track.Easing,
-                        keyframes = track.Keyframes.Select(keyframe => new
-                        {
-                            id = keyframe.Id,
-                            timeMs = keyframe.TimeMs,
-                            position = ToJsVector(keyframe.Position),
-                            rotation = ToJsVector(keyframe.Rotation),
-                            scale = ToJsVector(keyframe.Scale)
-                        })
-                    })
-                })
-                : null,
             upsertGroups = delta.UpsertGroups.Select(group => new
             {
                 id = group.Id,
@@ -332,6 +413,23 @@ public partial class Scene
                     property = transition.Property,
                     durationMs = transition.DurationMs,
                     easing = transition.Easing
+                }),
+                animations = group.Animations.Select(animation => new
+                {
+                    id = animation.Id,
+                    name = animation.Name,
+                    durationMs = animation.DurationMs,
+                    active = animation.Active,
+                    loop = animation.Loop,
+                    easing = animation.Easing,
+                    keyframes = animation.Keyframes.Select(keyframe => new
+                    {
+                        id = keyframe.Id,
+                        property = keyframe.Property,
+                        offset = keyframe.Offset,
+                        value = keyframe.Value,
+                        easing = keyframe.Easing
+                    })
                 }),
                 position = ToJsVector(group.Position),
                 rotation = ToJsVector(group.Rotation),
@@ -352,6 +450,23 @@ public partial class Scene
                     durationMs = transition.DurationMs,
                     easing = transition.Easing
                 }),
+                animations = mesh.Animations.Select(animation => new
+                {
+                    id = animation.Id,
+                    name = animation.Name,
+                    durationMs = animation.DurationMs,
+                    active = animation.Active,
+                    loop = animation.Loop,
+                    easing = animation.Easing,
+                    keyframes = animation.Keyframes.Select(keyframe => new
+                    {
+                        id = keyframe.Id,
+                        property = keyframe.Property,
+                        offset = keyframe.Offset,
+                        value = keyframe.Value,
+                        easing = keyframe.Easing
+                    })
+                }),
                 position = ToJsVector(mesh.Position),
                 rotation = ToJsVector(mesh.Rotation),
                 scale = ToJsVector(mesh.Scale)
@@ -368,6 +483,23 @@ public partial class Scene
                     property = transition.Property,
                     durationMs = transition.DurationMs,
                     easing = transition.Easing
+                }),
+                animations = model.Animations.Select(animation => new
+                {
+                    id = animation.Id,
+                    name = animation.Name,
+                    durationMs = animation.DurationMs,
+                    active = animation.Active,
+                    loop = animation.Loop,
+                    easing = animation.Easing,
+                    keyframes = animation.Keyframes.Select(keyframe => new
+                    {
+                        id = keyframe.Id,
+                        property = keyframe.Property,
+                        offset = keyframe.Offset,
+                        value = keyframe.Value,
+                        easing = keyframe.Easing
+                    })
                 }),
                 position = ToJsVector(model.Position),
                 rotation = ToJsVector(model.Rotation),

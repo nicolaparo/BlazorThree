@@ -19,13 +19,17 @@ internal sealed class SceneContext
 
     private readonly Dictionary<string, ModelClipInfo> modelClipInfos = new(StringComparer.Ordinal);
 
-    private readonly Dictionary<string, TimelineState> timelines = new(StringComparer.Ordinal);
-
     private readonly Dictionary<string, Func<SceneElementMouseEventArgs, Task>> clickHandlers = new(StringComparer.Ordinal);
 
     private readonly Dictionary<string, Func<SceneElementMouseEventArgs, Task>> mouseEnterHandlers = new(StringComparer.Ordinal);
 
     private readonly Dictionary<string, Func<SceneElementMouseEventArgs, Task>> mouseLeaveHandlers = new(StringComparer.Ordinal);
+
+    private readonly Dictionary<string, Func<AnimationEventArgs, Task>> animationStartHandlers = new(StringComparer.Ordinal);
+
+    private readonly Dictionary<string, Func<AnimationEventArgs, Task>> animationUpdateHandlers = new(StringComparer.Ordinal);
+
+    private readonly Dictionary<string, Func<AnimationEventArgs, Task>> animationEndHandlers = new(StringComparer.Ordinal);
 
     private CameraState camera = new();
 
@@ -42,8 +46,6 @@ internal sealed class SceneContext
     private bool orbitControlsDirty = true;
 
     private bool interactionDirty = true;
-
-    private bool timelinesDirty = true;
 
     private readonly HashSet<string> upsertedGroupIds = new(StringComparer.Ordinal);
 
@@ -151,22 +153,6 @@ internal sealed class SceneContext
         }
     }
 
-    public void UpsertTimeline(TimelineState state)
-    {
-        timelines[state.Name] = state;
-        timelinesDirty = true;
-        Changed?.Invoke();
-    }
-
-    public void RemoveTimeline(string name)
-    {
-        if (timelines.Remove(name))
-        {
-            timelinesDirty = true;
-            Changed?.Invoke();
-        }
-    }
-
     public void RemoveMesh(string id)
     {
         RemoveHandlers(MeshElementType, id);
@@ -252,6 +238,39 @@ internal sealed class SceneContext
         return DispatchWithGroupBubblingAsync(elementId, elementType, mouseLeaveHandlers);
     }
 
+    public void SetAnimationHandlers(
+        string animationId,
+        Func<AnimationEventArgs, Task>? onStart,
+        Func<AnimationEventArgs, Task>? onUpdate,
+        Func<AnimationEventArgs, Task>? onEnd)
+    {
+        SetHandler(animationStartHandlers, animationId, onStart);
+        SetHandler(animationUpdateHandlers, animationId, onUpdate);
+        SetHandler(animationEndHandlers, animationId, onEnd);
+    }
+
+    public void ClearAnimationHandlers(string animationId)
+    {
+        animationStartHandlers.Remove(animationId);
+        animationUpdateHandlers.Remove(animationId);
+        animationEndHandlers.Remove(animationId);
+    }
+
+    public Task DispatchAnimationStartAsync(AnimationEventArgs args)
+    {
+        return DispatchAnimationAsync(animationStartHandlers, args);
+    }
+
+    public Task DispatchAnimationUpdateAsync(AnimationEventArgs args)
+    {
+        return DispatchAnimationAsync(animationUpdateHandlers, args);
+    }
+
+    public Task DispatchAnimationEndAsync(AnimationEventArgs args)
+    {
+        return DispatchAnimationAsync(animationEndHandlers, args);
+    }
+
     public void SetModelClipInfo(string modelId, string sourceUrl, IReadOnlyList<string> clipNames)
     {
         var normalized = clipNames
@@ -311,8 +330,6 @@ internal sealed class SceneContext
                 DispatchableElementClickKeys = GetDispatchableElementClickKeys(),
                 DispatchableElementMouseEnterKeys = GetDispatchableElementMouseEnterKeys(),
                 DispatchableElementMouseLeaveKeys = GetDispatchableElementMouseLeaveKeys(),
-                TimelinesChanged = true,
-                Timelines = timelines.Values.ToArray(),
                 UpsertGroups = groups.Values.ToArray(),
                 UpsertMeshes = meshes.Values.ToArray(),
                 UpsertModels = models.Values.ToArray()
@@ -342,8 +359,6 @@ internal sealed class SceneContext
             DispatchableElementClickKeys = interactionDirty ? GetDispatchableElementClickKeys() : Array.Empty<string>(),
             DispatchableElementMouseEnterKeys = interactionDirty ? GetDispatchableElementMouseEnterKeys() : Array.Empty<string>(),
             DispatchableElementMouseLeaveKeys = interactionDirty ? GetDispatchableElementMouseLeaveKeys() : Array.Empty<string>(),
-            TimelinesChanged = timelinesDirty,
-            Timelines = timelinesDirty ? timelines.Values.ToArray() : Array.Empty<TimelineState>(),
             UpsertGroups = upsertGroups,
             RemoveGroupIds = removedGroupIds.ToArray(),
             UpsertMeshes = upsertMeshes,
@@ -364,7 +379,6 @@ internal sealed class SceneContext
             Lights = lights.Values.ToArray(),
             OrbitControls = orbitControls,
             Groups = groups.Values.ToArray(),
-            Timelines = timelines.Values.ToArray(),
             Meshes = meshes.Values.ToArray(),
             Models = models.Values.ToArray()
         };
@@ -394,7 +408,6 @@ internal sealed class SceneContext
         lightsDirty = false;
         orbitControlsDirty = false;
         interactionDirty = false;
-        timelinesDirty = false;
 
         upsertedGroupIds.Clear();
         removedGroupIds.Clear();
@@ -511,6 +524,32 @@ internal sealed class SceneContext
     private static string BuildHandlerKey(string elementType, string elementId)
     {
         return $"{elementType}:{elementId}";
+    }
+
+    private static void SetHandler<TEventArgs>(
+        Dictionary<string, Func<TEventArgs, Task>> handlers,
+        string key,
+        Func<TEventArgs, Task>? handler)
+    {
+        if (handler is null)
+        {
+            handlers.Remove(key);
+            return;
+        }
+
+        handlers[key] = handler;
+    }
+
+    private static Task DispatchAnimationAsync(
+        Dictionary<string, Func<AnimationEventArgs, Task>> handlers,
+        AnimationEventArgs args)
+    {
+        if (!handlers.TryGetValue(args.AnimationId, out var handler))
+        {
+            return Task.CompletedTask;
+        }
+
+        return handler(args);
     }
 
     private IReadOnlyCollection<string> BuildDispatchableElementKeys(

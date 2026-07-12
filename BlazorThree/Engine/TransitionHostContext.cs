@@ -14,4 +14,14 @@ internal sealed class TransitionHostContext
     /// </summary>
 
     public Action<string>? RemoveTransition { get; set; }
+
+    /// <summary>
+    /// Gets or sets the upsert animation callback.
+    /// </summary>
+    public Action<AnimationState>? UpsertAnimation { get; set; }
+
+    /// <summary>
+    /// Gets or sets the remove animation callback.
+    /// </summary>
+    public Action<string>? RemoveAnimation { get; set; }
 }

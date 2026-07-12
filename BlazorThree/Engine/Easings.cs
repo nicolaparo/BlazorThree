@@ -1,7 +1,7 @@
 namespace BlazorThree.Engine;
 
 /// <summary>
-/// Known easing identifiers supported by transitions and timeline tracks.
+/// Known easing identifiers supported by transitions and keyframe animations.
 /// </summary>
 public static class Easings
 {

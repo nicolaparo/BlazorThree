@@ -92,6 +92,22 @@ function buildChannel(path, transition, from, to) {
     };
 }
 
+function buildDerivedLookAtFromCamera(camera, targetLookAt) {
+    const forward = new THREE.Vector3();
+    camera.getWorldDirection(forward);
+
+    const dx = targetLookAt.x - camera.position.x;
+    const dy = targetLookAt.y - camera.position.y;
+    const dz = targetLookAt.z - camera.position.z;
+    const distance = Math.max(0.0001, Math.sqrt(dx * dx + dy * dy + dz * dz));
+
+    return {
+        x: camera.position.x + (forward.x * distance),
+        y: camera.position.y + (forward.y * distance),
+        z: camera.position.z + (forward.z * distance)
+    };
+}
+
 function updateCameraFromChannels(state, timestamp) {
     if (!state.cameraChannels.length) {
         return;
@@ -107,6 +123,12 @@ function updateCameraFromChannels(state, timestamp) {
             state.camera.fov = nextValue;
         } else if (channel.path === "position") {
             state.camera.position.set(nextValue.x, nextValue.y, nextValue.z);
+        } else if (channel.path === "up") {
+            state.camera.up.set(nextValue.x, nextValue.y, nextValue.z);
+        } else if (channel.path === "lookat") {
+            state.cameraLookAtTarget = nextValue
+                ? { x: nextValue.x, y: nextValue.y, z: nextValue.z }
+                : null;
         } else if (channel.path === "rotation") {
             state.camera.rotation.set(nextValue.x, nextValue.y, nextValue.z);
         }
@@ -117,6 +139,15 @@ function updateCameraFromChannels(state, timestamp) {
     }
 
     state.cameraChannels = activeChannels;
+
+    if (state.cameraLookAtTarget) {
+        state.camera.lookAt(
+            state.cameraLookAtTarget.x,
+            state.cameraLookAtTarget.y,
+            state.cameraLookAtTarget.z
+        );
+    }
+
     state.camera.updateProjectionMatrix();
 }
 
@@ -385,7 +416,18 @@ export function buildCamera(cameraState, hostElement) {
     const camera = new THREE.PerspectiveCamera(fov, width / height, 0.1, 1000);
 
     const position = readVector3(cameraState, "position", "Position", { x: 0, y: 1, z: 5 });
+    const rotation = readVector3(cameraState, "rotation", "Rotation", { x: 0, y: 0, z: 0 });
+    const up = readVector3(cameraState, "up", "Up", { x: 0, y: 1, z: 0 });
+    const lookAt = readVector3(cameraState, "lookAt", "LookAt", null);
+
     camera.position.set(position.x, position.y, position.z);
+    camera.up.set(up.x, up.y, up.z);
+
+    if (lookAt) {
+        camera.lookAt(lookAt.x, lookAt.y, lookAt.z);
+    } else {
+        camera.rotation.set(rotation.x, rotation.y, rotation.z);
+    }
 
     return camera;
 }
@@ -565,6 +607,8 @@ export function buildMaterial(state, meshState) {
 }
 
 export function ensureCamera(state, cameraState) {
+    state.cameraAnimations = value(cameraState, "animations", "Animations", []);
+
     const cameraSignature = signature(cameraState);
     if (state.cameraSignature === cameraSignature) {
         return;
@@ -574,10 +618,14 @@ export function ensureCamera(state, cameraState) {
     const height = state.hostElement.clientHeight || 1;
     const position = readVector3(cameraState, "position", "Position", { x: 0, y: 1, z: 5 });
     const rotation = readVector3(cameraState, "rotation", "Rotation", { x: 0, y: 0, z: 0 });
+    const up = readVector3(cameraState, "up", "Up", { x: 0, y: 1, z: 0 });
+    const lookAt = readVector3(cameraState, "lookAt", "LookAt", null);
     const target = {
         fov: value(cameraState, "fov", "Fov", 75),
         position,
-        rotation
+        rotation,
+        up,
+        lookAt
     };
 
     const transitions = buildTransitionMap(cameraState);
@@ -608,19 +656,58 @@ export function ensureCamera(state, cameraState) {
         state.camera.position.set(target.position.x, target.position.y, target.position.z);
     }
 
-    const rotationTransition = transitions.get("rotation");
-    if (rotationTransition) {
+    const upTransition = transitions.get("up");
+    if (upTransition) {
         const channel = buildChannel(
-            "rotation",
-            rotationTransition,
-            { x: state.camera.rotation.x, y: state.camera.rotation.y, z: state.camera.rotation.z },
-            target.rotation
+            "up",
+            upTransition,
+            { x: state.camera.up.x, y: state.camera.up.y, z: state.camera.up.z },
+            target.up
         );
         if (channel) {
             channels.push(channel);
         }
     } else {
-        state.camera.rotation.set(target.rotation.x, target.rotation.y, target.rotation.z);
+        state.camera.up.set(target.up.x, target.up.y, target.up.z);
+    }
+
+    const lookAtTransition = transitions.get("lookat");
+    if (target.lookAt) {
+        if (lookAtTransition) {
+            const fromLookAt = state.cameraLookAtTarget ?? buildDerivedLookAtFromCamera(state.camera, target.lookAt);
+            const channel = buildChannel(
+                "lookat",
+                lookAtTransition,
+                fromLookAt,
+                target.lookAt
+            );
+            if (channel) {
+                channels.push(channel);
+            } else {
+                state.cameraLookAtTarget = { x: target.lookAt.x, y: target.lookAt.y, z: target.lookAt.z };
+                state.camera.lookAt(target.lookAt.x, target.lookAt.y, target.lookAt.z);
+            }
+        } else {
+            state.cameraLookAtTarget = { x: target.lookAt.x, y: target.lookAt.y, z: target.lookAt.z };
+            state.camera.lookAt(target.lookAt.x, target.lookAt.y, target.lookAt.z);
+        }
+    } else {
+        state.cameraLookAtTarget = null;
+
+        const rotationTransition = transitions.get("rotation");
+        if (rotationTransition) {
+            const channel = buildChannel(
+                "rotation",
+                rotationTransition,
+                { x: state.camera.rotation.x, y: state.camera.rotation.y, z: state.camera.rotation.z },
+                target.rotation
+            );
+            if (channel) {
+                channels.push(channel);
+            }
+        } else {
+            state.camera.rotation.set(target.rotation.x, target.rotation.y, target.rotation.z);
+        }
     }
 
     state.cameraChannels = channels;
@@ -631,6 +718,8 @@ export function ensureCamera(state, cameraState) {
 }
 
 export function ensureLight(record, lightState) {
+    record.animations = value(lightState, "animations", "Animations", []);
+
     const typeState = value(lightState, "type", "Type", {});
     const type = value(typeState, "kind", "Kind", "directional");
     const previousLight = record.light;
@@ -689,7 +778,6 @@ export function ensureLight(record, lightState) {
     } else if (record.light.position) {
         record.light.position.set(position.x, position.y, position.z);
     }
-
     record.channels = channels;
     record.signature = lightSignature;
     return null;

@@ -3,9 +3,69 @@ import { OrbitControls } from "https://esm.sh/three@0.178.0/examples/jsm/control
 import { buildCamera, ensureCamera, ensureLight, updateCameraAnimation, updateLightAnimation } from "./blazorthree/assets.js";
 import { clearSceneNodes, disposeGroupRecord, disposeMeshRecord, disposeModelRecord, syncGroups, syncMeshes, syncModels, updateMeshStyleAnimation, updateModelPlayback } from "./blazorthree/nodes.js";
 import { now, value } from "./blazorthree/shared.js";
-import { applyLiveTimeline, buildTimelineMap, updateRecordAnimation } from "./blazorthree/timeline.js";
+import {
+    applyHostAnimationsToCamera,
+    applyHostAnimationsToLight,
+    applyHostAnimationsToObject3D,
+    pruneAnimationPlayback,
+    updateRecordAnimation
+} from "./blazorthree/animations.js";
 
 const scenes = new Map();
+
+function normalizeBackgroundTextureSizing(raw) {
+    const normalized = String(raw || "").trim().toLowerCase();
+    if (normalized === "stretch" || normalized === "fixed") {
+        return normalized;
+    }
+
+    return "cover";
+}
+
+function applyBackgroundTextureSizing(state, width, height) {
+    if (!state.backgroundTexture) {
+        return;
+    }
+
+    const texture = state.backgroundTexture;
+    const mode = state.backgroundTextureSizing;
+
+    texture.wrapS = THREE.ClampToEdgeWrapping;
+    texture.wrapT = THREE.ClampToEdgeWrapping;
+
+    if (mode === "stretch") {
+        texture.repeat.set(1, 1);
+        texture.offset.set(0, 0);
+        texture.needsUpdate = true;
+        return;
+    }
+
+    const imageWidth = texture.image?.width || 0;
+    const imageHeight = texture.image?.height || 0;
+    if (imageWidth <= 0 || imageHeight <= 0) {
+        return;
+    }
+
+    const targetWidth = mode === "fixed" ? state.backgroundReferenceWidth : width;
+    const targetHeight = mode === "fixed" ? state.backgroundReferenceHeight : height;
+
+    const safeWidth = Math.max(1, targetWidth);
+    const safeHeight = Math.max(1, targetHeight);
+    const screenAspect = safeWidth / safeHeight;
+    const imageAspect = imageWidth / imageHeight;
+
+    let repeatX = 1;
+    let repeatY = 1;
+    if (screenAspect > imageAspect) {
+        repeatY = imageAspect / screenAspect;
+    } else {
+        repeatX = screenAspect / imageAspect;
+    }
+
+    texture.repeat.set(repeatX, repeatY);
+    texture.offset.set((1 - repeatX) / 2, (1 - repeatY) / 2);
+    texture.needsUpdate = true;
+}
 
 function readPickMeta(object3D) {
     let current = object3D;
@@ -199,6 +259,51 @@ function render(state) {
     state.renderer.render(state.scene, state.camera);
 }
 
+function emitAnimationEvent(state, phase, payload) {
+    if (!state.dotNetRef?.invokeMethodAsync || !payload?.animationId) {
+        return;
+    }
+
+    if (phase === "start") {
+        state.dotNetRef.invokeMethodAsync(
+            "OnAnimationStarted",
+            payload.animationId,
+            payload.name,
+            payload.currentTimeMs,
+            payload.progress,
+            payload.iteration
+        ).catch(() => {
+            // Ignore callback errors during teardown and reconnects.
+        });
+        return;
+    }
+
+    if (phase === "update") {
+        state.dotNetRef.invokeMethodAsync(
+            "OnAnimationUpdated",
+            payload.animationId,
+            payload.name,
+            payload.currentTimeMs,
+            payload.progress,
+            payload.iteration
+        ).catch(() => {
+            // Ignore callback errors during teardown and reconnects.
+        });
+        return;
+    }
+
+    state.dotNetRef.invokeMethodAsync(
+        "OnAnimationEnded",
+        payload.animationId,
+        payload.name,
+        payload.currentTimeMs,
+        payload.progress,
+        payload.iteration
+    ).catch(() => {
+        // Ignore callback errors during teardown and reconnects.
+    });
+}
+
 function tryGetLightId(lightState) {
     const rawId = value(lightState, "id", "Id", null);
     if (rawId === null || rawId === undefined) {
@@ -234,7 +339,8 @@ function upsertLightRecord(state, lightState) {
             light: null,
             kind: null,
             signature: "",
-            channels: []
+            channels: [],
+            animations: []
         };
         state.lights.set(lightId, record);
     }
@@ -267,6 +373,10 @@ function syncLights(state, lightStates) {
 export function initScene(hostElement, options, dotNetRef) {
     const sceneId = crypto.randomUUID();
     const clearColor = value(options, "clearColor", "ClearColor", "#0d1117");
+    const backgroundTextureUrl = value(options, "backgroundTextureUrl", "BackgroundTextureUrl", null);
+    const backgroundTextureSizing = normalizeBackgroundTextureSizing(
+        value(options, "backgroundTextureSizing", "BackgroundTextureSizing", "cover")
+    );
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(clearColor);
@@ -292,13 +402,18 @@ export function initScene(hostElement, options, dotNetRef) {
         orbitControlsState: { enabled: false, enableDamping: true, dampingFactor: 0.08 },
         textureLoader: new THREE.TextureLoader(),
         textureCache: new Map(),
+        backgroundTexture: null,
+        backgroundTextureSizing,
+        backgroundReferenceWidth: hostElement.clientWidth || 1,
+        backgroundReferenceHeight: hostElement.clientHeight || 1,
         groups: new Map(),
         meshes: new Map(),
         models: new Map(),
-        timelines: [],
-        timelinePlayback: new Map(),
+        animationPlayback: new Map(),
+        cameraAnimations: [],
         cameraSignature: "",
         cameraChannels: [],
+        cameraLookAtTarget: null,
         frameHandle: 0,
         resizeObserver: null,
         dotNetRef,
@@ -309,6 +424,19 @@ export function initScene(hostElement, options, dotNetRef) {
         pointerClickAttached: false
     };
 
+    if (typeof backgroundTextureUrl === "string" && backgroundTextureUrl.trim().length > 0) {
+        const texture = new THREE.TextureLoader().load(backgroundTextureUrl, () => {
+            const width = hostElement.clientWidth || 1;
+            const height = hostElement.clientHeight || 1;
+            applyBackgroundTextureSizing(state, width, height);
+            render(state);
+        });
+
+        texture.colorSpace = THREE.SRGBColorSpace;
+        scene.background = texture;
+        state.backgroundTexture = texture;
+    }
+
     state.handlePointerMove = event => handlePointerMove(state, event);
     state.handlePointerLeave = () => clearHover(state);
     state.handlePointerClick = event => handlePointerClick(state, event);
@@ -317,26 +445,35 @@ export function initScene(hostElement, options, dotNetRef) {
         state.frameHandle = requestAnimationFrame(animate);
 
         const timestamp = now();
-
-        const timelineMap = buildTimelineMap(state.timelines, state.timelinePlayback, timestamp);
-        applyLiveTimeline(state, timelineMap);
+        const liveAnimationIds = new Set();
+        const emit = (phase, payload) => emitAnimationEvent(state, phase, payload);
 
         updateCameraAnimation(state, timestamp);
+        applyHostAnimationsToCamera(state, state.animationPlayback, timestamp, emit, liveAnimationIds);
+
         updateLightAnimation(state, timestamp);
+        for (const lightRecord of state.lights.values()) {
+            applyHostAnimationsToLight(lightRecord, state.animationPlayback, timestamp, emit, liveAnimationIds);
+        }
 
         for (const record of state.groups.values()) {
             updateRecordAnimation(record, timestamp);
+            applyHostAnimationsToObject3D(record, state.animationPlayback, timestamp, emit, liveAnimationIds);
         }
 
         for (const record of state.meshes.values()) {
             updateMeshStyleAnimation(state, record, timestamp);
             updateRecordAnimation(record, timestamp);
+            applyHostAnimationsToObject3D(record, state.animationPlayback, timestamp, emit, liveAnimationIds);
         }
 
         for (const record of state.models.values()) {
             updateModelPlayback(record, timestamp);
             updateRecordAnimation(record, timestamp);
+            applyHostAnimationsToObject3D(record, state.animationPlayback, timestamp, emit, liveAnimationIds);
         }
+
+        pruneAnimationPlayback(state.animationPlayback, liveAnimationIds);
 
         if (state.orbitControls && value(state.orbitControlsState, "enableDamping", "EnableDamping", true)) {
             state.orbitControls.update();
@@ -351,6 +488,7 @@ export function initScene(hostElement, options, dotNetRef) {
         state.camera.aspect = width / height;
         state.camera.updateProjectionMatrix();
         state.renderer.setSize(width, height);
+        applyBackgroundTextureSizing(state, width, height);
         if (state.orbitControls) {
             state.orbitControls.update();
         }
@@ -371,13 +509,6 @@ export function syncScene(sceneId, graph) {
     }
 
     const isFull = value(graph, "isFull", "IsFull", false);
-
-    const timelinesChanged = isFull || value(graph, "timelinesChanged", "TimelinesChanged", false);
-    if (timelinesChanged) {
-        state.timelines = value(graph, "timelines", "Timelines", []);
-    }
-
-    const timelineMap = buildTimelineMap(state.timelines, state.timelinePlayback, now());
 
     const interactionChanged = isFull || value(graph, "interactionChanged", "InteractionChanged", false);
     if (interactionChanged) {
@@ -454,9 +585,9 @@ export function syncScene(sceneId, graph) {
     const modelStates = value(graph, "upsertModels", "UpsertModels", []);
 
     if (isFull) {
-        const liveGroupIds = syncGroups(state, groupStates, timelineMap);
-        const liveMeshIds = syncMeshes(state, meshStates, timelineMap);
-        const liveModelIds = syncModels(state, modelStates, timelineMap);
+        const liveGroupIds = syncGroups(state, groupStates);
+        const liveMeshIds = syncMeshes(state, meshStates);
+        const liveModelIds = syncModels(state, modelStates);
 
         for (const [id, record] of state.meshes.entries()) {
             if (!liveMeshIds.has(id)) {
@@ -480,7 +611,7 @@ export function syncScene(sceneId, graph) {
         }
     } else {
         if (groupStates.length) {
-            syncGroups(state, groupStates, timelineMap);
+            syncGroups(state, groupStates);
         }
 
         const removeGroupIds = value(graph, "removeGroupIds", "RemoveGroupIds", []);
@@ -495,7 +626,7 @@ export function syncScene(sceneId, graph) {
         }
 
         if (meshStates.length) {
-            syncMeshes(state, meshStates, timelineMap);
+            syncMeshes(state, meshStates);
         }
 
         const removeMeshIds = value(graph, "removeMeshIds", "RemoveMeshIds", []);
@@ -510,7 +641,7 @@ export function syncScene(sceneId, graph) {
         }
 
         if (modelStates.length) {
-            syncModels(state, modelStates, timelineMap);
+            syncModels(state, modelStates);
         }
 
         const removeModelIds = value(graph, "removeModelIds", "RemoveModelIds", []);
@@ -557,8 +688,13 @@ export function disposeScene(sceneId) {
         texture.dispose();
     }
 
+    if (state.backgroundTexture) {
+        state.backgroundTexture.dispose();
+        state.backgroundTexture = null;
+    }
+
     state.textureCache.clear();
-    state.timelinePlayback.clear();
+    state.animationPlayback.clear();
 
     if (state.orbitControls) {
         state.orbitControls.dispose();

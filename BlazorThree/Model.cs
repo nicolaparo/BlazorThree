@@ -17,6 +17,8 @@ public class Model : Object3d, IDisposable
 
     private readonly Dictionary<string, TransitionState> transitions = new(StringComparer.Ordinal);
 
+    private readonly Dictionary<string, AnimationState> animations = new(StringComparer.Ordinal);
+
     private string availableClipsSignature = string.Empty;
 
     private bool isDisposed;
@@ -34,7 +36,7 @@ public class Model : Object3d, IDisposable
     public string SourceUrl { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the class name used to match timeline tracks.
+    /// Gets or sets the class name used to target this node from runtime animations.
     /// </summary>
     [Parameter]
     public string? ClassName { get; set; }
@@ -161,6 +163,30 @@ public class Model : Object3d, IDisposable
             }
         };
 
+        transitionHostContext.UpsertAnimation = animation =>
+        {
+            if (isDisposed)
+            {
+                return;
+            }
+
+            animations[animation.Id] = animation;
+            Publish();
+        };
+
+        transitionHostContext.RemoveAnimation = animationId =>
+        {
+            if (isDisposed)
+            {
+                return;
+            }
+
+            if (animations.Remove(animationId))
+            {
+                Publish();
+            }
+        };
+
         if (SceneContext is not null)
         {
             SceneContext.ModelClipsChanged += HandleModelClipsChanged;
@@ -212,6 +238,7 @@ public class Model : Object3d, IDisposable
             SourceUrl = SourceUrl,
             ClassName = ClassName,
             Transitions = transitions.Values.OrderBy(transition => transition.Property, StringComparer.Ordinal).ToArray(),
+            Animations = animations.Values.OrderBy(animation => animation.Id, StringComparer.Ordinal).ToArray(),
             Position = Position,
             Rotation = Rotation,
             Scale = Scale,
@@ -285,6 +312,8 @@ public class Model : Object3d, IDisposable
         modelContext.RemoveBonePose = null;
         transitionHostContext.UpsertTransition = null;
         transitionHostContext.RemoveTransition = null;
+        transitionHostContext.UpsertAnimation = null;
+        transitionHostContext.RemoveAnimation = null;
 
         if (SceneContext is not null)
         {

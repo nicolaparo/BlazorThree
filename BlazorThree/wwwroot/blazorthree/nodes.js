@@ -3,8 +3,8 @@ import { ColladaLoader } from "https://esm.sh/three@0.178.0/examples/jsm/loaders
 import { FBXLoader } from "https://esm.sh/three@0.178.0/examples/jsm/loaders/FBXLoader";
 import { GLTFLoader } from "https://esm.sh/three@0.178.0/examples/jsm/loaders/GLTFLoader";
 import { buildGeometry, buildMaterial } from "./assets.js";
-import { ease, mergeTransform, readBaseTransform, readVector3, signature, value } from "./shared.js";
-import { applyRecordTarget } from "./timeline.js";
+import { ease, readBaseTransform, readVector3, signature, value } from "./shared.js";
+import { applyRecordTarget } from "./animations.js";
 
 function getParentObject(state, parentId) {
     if (!parentId) {
@@ -914,7 +914,7 @@ function buildNodeTransitionMap(nodeState) {
     return map;
 }
 
-export function syncGroups(state, groups, timelineMap) {
+export function syncGroups(state, groups) {
     const liveGroupIds = new Set();
 
     for (const groupState of groups) {
@@ -929,6 +929,7 @@ export function syncGroups(state, groups, timelineMap) {
                 className: null,
                 targetSignature: "",
                 animation: null,
+                animations: [],
                 baseTransform: null,
                 transitionMap: new Map()
             };
@@ -940,18 +941,17 @@ export function syncGroups(state, groups, timelineMap) {
 
         const className = value(groupState, "className", "ClassName", null);
         record.className = className;
+        record.animations = value(groupState, "animations", "Animations", []);
         const baseTransform = readBaseTransform(groupState);
         record.baseTransform = baseTransform;
         record.transitionMap = buildNodeTransitionMap(groupState);
-        const timelineTransform = className ? timelineMap.get(className) : null;
-        const targetTransform = mergeTransform(baseTransform, timelineTransform);
-        applyRecordTarget(record, targetTransform, timelineTransform);
+        applyRecordTarget(record, baseTransform, null);
     }
 
     return liveGroupIds;
 }
 
-export function syncMeshes(state, meshes, timelineMap) {
+export function syncMeshes(state, meshes) {
     const liveMeshIds = new Set();
 
     for (const meshState of meshes) {
@@ -968,6 +968,7 @@ export function syncMeshes(state, meshes, timelineMap) {
                 className: null,
                 targetSignature: "",
                 animation: null,
+                animations: [],
                 outline: null,
                 baseTransform: null,
                 transitionMap: new Map(),
@@ -985,19 +986,18 @@ export function syncMeshes(state, meshes, timelineMap) {
 
         const className = value(meshState, "className", "ClassName", null);
         record.className = className;
+        record.animations = value(meshState, "animations", "Animations", []);
         const baseTransform = readBaseTransform(meshState);
         record.baseTransform = baseTransform;
         record.transitionMap = buildNodeTransitionMap(meshState);
         applyMeshStyleTargets(state, record, meshState);
-        const timelineTransform = className ? timelineMap.get(className) : null;
-        const targetTransform = mergeTransform(baseTransform, timelineTransform);
-        applyRecordTarget(record, targetTransform, timelineTransform);
+        applyRecordTarget(record, baseTransform, null);
     }
 
     return liveMeshIds;
 }
 
-export function syncModels(state, models, timelineMap) {
+export function syncModels(state, models) {
     const liveModelIds = new Set();
 
     for (const modelState of models) {
@@ -1015,6 +1015,7 @@ export function syncModels(state, models, timelineMap) {
                 className: null,
                 targetSignature: "",
                 animation: null,
+                animations: [],
                 baseTransform: null,
                 transitionMap: new Map(),
                 sourceSignature: "",
@@ -1076,12 +1077,11 @@ export function syncModels(state, models, timelineMap) {
 
         const className = value(modelState, "className", "ClassName", null);
         record.className = className;
+        record.animations = value(modelState, "animations", "Animations", []);
         const baseTransform = readBaseTransform(modelState);
         record.baseTransform = baseTransform;
         record.transitionMap = buildNodeTransitionMap(modelState);
-        const timelineTransform = className ? timelineMap.get(className) : null;
-        const targetTransform = mergeTransform(baseTransform, timelineTransform);
-        applyRecordTarget(record, targetTransform, timelineTransform);
+        applyRecordTarget(record, baseTransform, null);
 
         record.latestModelState = modelState;
         syncModelAnimation(record, modelState);

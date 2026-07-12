@@ -24,11 +24,6 @@ internal sealed class SceneState
 
     public IReadOnlyList<GroupState> Groups { get; set; } = Array.Empty<GroupState>();
     /// <summary>
-    /// Gets or sets the timelines.
-    /// </summary>
-
-    public IReadOnlyList<TimelineState> Timelines { get; set; } = Array.Empty<TimelineState>();
-    /// <summary>
     /// Gets or sets the meshes.
     /// </summary>
 

@@ -16,6 +16,8 @@ public class Light : ComponentBase, IPositionable, IDisposable
 
     private readonly Dictionary<string, TransitionState> transitions = new(StringComparer.Ordinal);
 
+    private readonly Dictionary<string, AnimationState> animations = new(StringComparer.Ordinal);
+
     private string? lastPublishedId;
 
     private bool isDisposed;
@@ -98,6 +100,20 @@ public class Light : ComponentBase, IPositionable, IDisposable
                 Publish();
             }
         };
+
+        transitionHostContext.UpsertAnimation = animation =>
+        {
+            animations[animation.Id] = animation;
+            Publish();
+        };
+
+        transitionHostContext.RemoveAnimation = animationId =>
+        {
+            if (animations.Remove(animationId))
+            {
+                Publish();
+            }
+        };
     }
 
     /// <summary>
@@ -129,7 +145,8 @@ public class Light : ComponentBase, IPositionable, IDisposable
             Color = Color,
             Intensity = Intensity,
             Position = Position,
-            Transitions = transitions.Values.OrderBy(transition => transition.Property, StringComparer.Ordinal).ToArray()
+            Transitions = transitions.Values.OrderBy(transition => transition.Property, StringComparer.Ordinal).ToArray(),
+            Animations = animations.Values.OrderBy(animation => animation.Id, StringComparer.Ordinal).ToArray()
         });
 
         lastPublishedId = lightId;
@@ -143,6 +160,8 @@ public class Light : ComponentBase, IPositionable, IDisposable
         isDisposed = true;
         transitionHostContext.UpsertTransition = null;
         transitionHostContext.RemoveTransition = null;
+        transitionHostContext.UpsertAnimation = null;
+        transitionHostContext.RemoveAnimation = null;
 
         SceneContext?.RemoveLight(lastPublishedId ?? CurrentId);
     }

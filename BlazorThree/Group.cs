@@ -15,6 +15,8 @@ public class Group : Object3d, IDisposable
 
     private readonly Dictionary<string, TransitionState> transitions = new(StringComparer.Ordinal);
 
+    private readonly Dictionary<string, AnimationState> animations = new(StringComparer.Ordinal);
+
     private bool isDisposed;
 
     /// <summary>
@@ -24,7 +26,7 @@ public class Group : Object3d, IDisposable
     public RenderFragment? ChildContent { get; set; }
 
     /// <summary>
-    /// Gets or sets the class name used to match timeline tracks.
+    /// Gets or sets the class name used to target this node from runtime animations.
     /// </summary>
     [Parameter]
     public string? ClassName { get; set; }
@@ -78,6 +80,30 @@ public class Group : Object3d, IDisposable
                 Publish();
             }
         };
+
+        transitionHostContext.UpsertAnimation = animation =>
+        {
+            if (isDisposed)
+            {
+                return;
+            }
+
+            animations[animation.Id] = animation;
+            Publish();
+        };
+
+        transitionHostContext.RemoveAnimation = animationId =>
+        {
+            if (isDisposed)
+            {
+                return;
+            }
+
+            if (animations.Remove(animationId))
+            {
+                Publish();
+            }
+        };
     }
 
     /// <summary>
@@ -112,6 +138,7 @@ public class Group : Object3d, IDisposable
             ParentId = NodeContainer?.ParentId,
             ClassName = ClassName,
             Transitions = transitions.Values.OrderBy(transition => transition.Property, StringComparer.Ordinal).ToArray(),
+            Animations = animations.Values.OrderBy(animation => animation.Id, StringComparer.Ordinal).ToArray(),
             Position = Position,
             Rotation = Rotation,
             Scale = Scale
@@ -128,6 +155,8 @@ public class Group : Object3d, IDisposable
         isDisposed = true;
         transitionHostContext.UpsertTransition = null;
         transitionHostContext.RemoveTransition = null;
+        transitionHostContext.UpsertAnimation = null;
+        transitionHostContext.RemoveAnimation = null;
 
         SceneContext?.RemoveGroup(GetDisposeId());
     }

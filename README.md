@@ -150,6 +150,37 @@ Place `Transition` inside `Mesh`, `Group`, or `Model` to animate specific transf
 </Group>
 ```
 
+### Keyframe animations
+
+Use `Animation` with nested `Keyframe` entries when you want CSS-like keyframe animation behavior managed internally by the runtime.
+
+- `DurationMs` sets animation duration in milliseconds
+- `Active` starts or pauses playback
+- `Loop` repeats playback
+- `Easing` sets the default easing between keyframes
+- `OnStart`, `OnUpdate`, and `OnEnd` expose playback lifecycle events
+
+`Keyframe` supports any animatable property path available in the current scope, including transforms and nested paths such as `Material.Color`, `Material.Opacity`, `Geometry.Width`, and `Outline.Opacity`.
+
+```razor
+<Mesh>
+   <Animation DurationMs="2000" Loop="true" Active="true" Easing="@Easings.EaseInOutQuad" OnUpdate="OnAnimationUpdate">
+      <Keyframe Offset="0" Property="Position" Value="@(new Vector3(0f, 0f, 0f))" />
+      <Keyframe Offset="0" Property="Rotation" Value="@(new Vector3(0f, 0f, 0f))" />
+      <Keyframe Offset="50" Property="Position" Value="@(new Vector3(0f, 1.2f, 0f))" />
+      <Keyframe Offset="100" Property="Rotation" Value="@(new Vector3(0f, 1.57f, 0f))" />
+      <Keyframe Offset="0" Property="Material.Color" Value="#3b82f6" />
+      <Keyframe Offset="100" Property="Material.Color" Value="#ef4444" />
+      <Keyframe Offset="0" Property="Outline.Opacity" Value="0.2" />
+      <Keyframe Offset="100" Property="Outline.Opacity" Value="0.95" />
+   </Animation>
+
+   <BoxGeometry Width="1" Height="1" Depth="1" />
+   <MeshStandardMaterial Color="#3b82f6" />
+   <Outline Color="#ffffff" Opacity="0.2" />
+</Mesh>
+```
+
 ## Models, clips, and bones
 
 `Model` supports runtime-loaded assets and animation playback controls:

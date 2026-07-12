@@ -466,6 +466,29 @@ function applyPropertyPath({ object3D, material, geometry, outline, allowFov, pr
         return;
     }
 
+    if (leaf === "up") {
+        const vector = asVector3(propertyValue);
+        if (!vector) {
+            return;
+        }
+
+        const target = readPathValue(root, localParts);
+        if (target?.set) {
+            target.set(vector.x, vector.y, vector.z);
+        }
+        return;
+    }
+
+    if (leaf === "lookat") {
+        const vector = asVector3(propertyValue);
+        if (!vector || !root.lookAt) {
+            return;
+        }
+
+        root.lookAt(vector.x, vector.y, vector.z);
+        return;
+    }
+
     if (leaf === "fov" && allowFov && typeof propertyValue === "number") {
         root.fov = propertyValue;
         root.updateProjectionMatrix?.();

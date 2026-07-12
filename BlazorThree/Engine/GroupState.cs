@@ -26,6 +26,11 @@ internal sealed class GroupState : IPositionable, IRotatable, IScalable
     /// </summary>
 
     public IReadOnlyList<TransitionState> Transitions { get; set; } = Array.Empty<TransitionState>();
+
+    /// <summary>
+    /// Gets or sets host animations.
+    /// </summary>
+    public IReadOnlyList<AnimationState> Animations { get; set; } = Array.Empty<AnimationState>();
     /// <summary>
     /// Gets or sets the position.
     /// </summary>

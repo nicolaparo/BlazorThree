@@ -77,16 +77,6 @@ internal sealed class SceneDeltaState
 
     public IReadOnlyCollection<string> DispatchableElementMouseLeaveKeys { get; init; } = Array.Empty<string>();
     /// <summary>
-    /// Gets or sets the timelines changed.
-    /// </summary>
-
-    public bool TimelinesChanged { get; init; }
-    /// <summary>
-    /// Gets or sets the timelines.
-    /// </summary>
-
-    public IReadOnlyList<TimelineState> Timelines { get; init; } = Array.Empty<TimelineState>();
-    /// <summary>
     /// Gets or sets the upsert groups.
     /// </summary>
 
@@ -125,7 +115,6 @@ internal sealed class SceneDeltaState
         || RemoveLightIds.Count > 0
         || OrbitControlsChanged
         || InteractionChanged
-        || TimelinesChanged
         || UpsertGroups.Count > 0
         || RemoveGroupIds.Count > 0
         || UpsertMeshes.Count > 0

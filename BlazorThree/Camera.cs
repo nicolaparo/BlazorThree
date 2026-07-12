@@ -14,6 +14,8 @@ public class Camera : ComponentBase, IPositionable, IRotatable
 
     private readonly Dictionary<string, TransitionState> transitions = new(StringComparer.Ordinal);
 
+    private readonly Dictionary<string, AnimationState> animations = new(StringComparer.Ordinal);
+
     /// <summary>
     /// Gets or sets the scene context that receives camera updates.
     /// </summary>
@@ -40,6 +42,21 @@ public class Camera : ComponentBase, IPositionable, IRotatable
     [Animatable]
     [Parameter]
     public Vector3 Rotation { get; set; }
+
+    /// <summary>
+    /// Gets or sets the camera up direction.
+    /// </summary>
+    [Animatable]
+    [Parameter]
+    public Vector3 Up { get; set; } = Vector3.UnitY;
+
+    /// <summary>
+    /// Gets or sets an optional world-space point the camera should face.
+    /// When specified, this overrides <see cref="Rotation" />.
+    /// </summary>
+    [Animatable]
+    [Parameter]
+    public Vector3? LookAt { get; set; }
 
     /// <summary>
     /// Gets or sets nested transition descriptors for camera properties.
@@ -80,6 +97,20 @@ public class Camera : ComponentBase, IPositionable, IRotatable
                 Publish();
             }
         };
+
+        transitionHostContext.UpsertAnimation = animation =>
+        {
+            animations[animation.Id] = animation;
+            Publish();
+        };
+
+        transitionHostContext.RemoveAnimation = animationId =>
+        {
+            if (animations.Remove(animationId))
+            {
+                Publish();
+            }
+        };
     }
 
     /// <summary>
@@ -97,7 +128,10 @@ public class Camera : ComponentBase, IPositionable, IRotatable
             Fov = Fov,
             Position = Position,
             Rotation = Rotation,
-            Transitions = transitions.Values.OrderBy(transition => transition.Property, StringComparer.Ordinal).ToArray()
+            Up = Up,
+            LookAt = LookAt,
+            Transitions = transitions.Values.OrderBy(transition => transition.Property, StringComparer.Ordinal).ToArray(),
+            Animations = animations.Values.OrderBy(animation => animation.Id, StringComparer.Ordinal).ToArray()
         });
     }
 }
