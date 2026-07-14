@@ -22,6 +22,25 @@ Compared to other libraries, BlazorThree centers the component model as the prim
 
 The goal is predictable, maintainable 3D UI composition for Blazor-first applications.
 
+## Demo app quickstart
+
+If you want to try the demo app from this repository instead of consuming the NuGet package directly:
+
+1. Clone the repository.
+2. Change into the demo folder:
+
+   ```powershell
+   cd demo
+   ```
+
+3. Run the Blazor Server demo project:
+
+   ```powershell
+   dotnet run --project BlazorThree.Demo.BlazorServer/BlazorThree.Demo.BlazorServer.csproj
+   ```
+
+4. Open the local URL printed by `dotnet run` in your browser.
+
 ## Preview status
 
 BlazorThree is still a preview feature. The API surface, runtime behavior, packaging details, and documentation may change before a stable release.

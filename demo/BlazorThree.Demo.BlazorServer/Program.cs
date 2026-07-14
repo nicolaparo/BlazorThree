@@ -22,6 +22,7 @@ app.UseAntiforgery();
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>()
+    .AddAdditionalAssemblies(typeof(BlazorThree.Demo.Shared.Components.Routes).Assembly)
     .AddInteractiveServerRenderMode();
 
 app.Run();
