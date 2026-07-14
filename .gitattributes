@@ -1,0 +1,2 @@
+# Preserve published site bytes so Blazor SRI hashes remain valid on GitHub Pages.
+docs/** -text
