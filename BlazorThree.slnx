@@ -1,4 +1,6 @@
 <Solution>
-  <Project Path="BlazorThree.Demo/BlazorThree.Demo.csproj" />
-  <Project Path="BlazorThree/BlazorThree.csproj" />
+  <Project Path="demo/BlazorThree.Demo.BlazorServer/BlazorThree.Demo.BlazorServer.csproj" />
+  <Project Path="demo/BlazorThree.Demo.BlazorWebAssembly/BlazorThree.Demo.BlazorWebAssembly.csproj" />
+  <Project Path="demo/BlazorThree.Demo.Shared/BlazorThree.Demo.Shared.csproj" />
+  <Project Path="src/BlazorThree/BlazorThree.csproj" />
 </Solution>

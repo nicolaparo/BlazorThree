@@ -7,8 +7,8 @@
 
 BlazorThree is a .NET 10 Razor Class Library for building Three.js scenes with declarative Blazor components. You compose a scene graph in Razor, and the library keeps a browser-side Three.js runtime synchronized for rendering, animation, model playback, and scene interaction.
 
-![BlazorThree demo 1](demo-1.png)
-![BlazorThree demo 2](demo-2.png)
+![BlazorThree demo 1](docs/res/demo-1.png)
+![BlazorThree demo 2](docs/res/demo-2.png)
 
 ## Why BlazorThree
 
@@ -276,10 +276,16 @@ Build the solution:
 dotnet build BlazorThree.slnx
 ```
 
-Run the demo app:
+Run the Blazor Server demo app:
 
 ```bash
-dotnet run --project BlazorThree.Demo/BlazorThree.Demo.csproj
+dotnet run --project demo/BlazorThree.Demo.BlazorServer/BlazorThree.Demo.BlazorServer.csproj
+```
+
+Run the Blazor WebAssembly demo app:
+
+```bash
+dotnet run --project demo/BlazorThree.Demo.BlazorWebAssembly/BlazorThree.Demo.BlazorWebAssembly.csproj
 ```
 
 Then open the local URL printed by ASP.NET Core.
@@ -288,8 +294,10 @@ Then open the local URL printed by ASP.NET Core.
 
 The repository contains:
 
-- `BlazorThree`: the reusable component library
-- `BlazorThree.Demo`: a sample Blazor app showing working scene composition, transitions, models, and interaction
+- `src/BlazorThree`: the reusable component library
+- `demo/BlazorThree.Demo.Shared`: shared demo components, pages, layout, and static assets
+- `demo/BlazorThree.Demo.BlazorServer`: Blazor Server host for the shared demo
+- `demo/BlazorThree.Demo.BlazorWebAssembly`: Blazor WebAssembly host for the shared demo
 
 The demo reflects the current preview feature set and is not a statement of stable API guarantees.
 

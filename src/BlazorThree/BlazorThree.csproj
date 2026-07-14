@@ -10,6 +10,8 @@
     <Authors>Nicola Paro</Authors>
     <Description>Declarative Three.js scene components for Blazor.</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/nicolaparo/BlazorThree</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
   </PropertyGroup>
 
 

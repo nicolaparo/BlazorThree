@@ -1,17 +1,14 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+<Project Sdk="Microsoft.NET.Sdk.Razor">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
+    <AddRazorSupportForMvc>true</AddRazorSupportForMvc>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="BlazorThree" Version="0.1.0-preview" />
   </ItemGroup>
-  <!-- <ItemGroup>
-    <ProjectReference Include="../BlazorThree/BlazorThree.csproj" />
-  </ItemGroup> -->
 
 </Project>

@@ -1,6 +1,6 @@
-# BlazorThree.Demo
+# BlazorThree.Demo.Shared
 
-Demo app for BlazorThree on .NET 10.
+Shared UI, pages, and static assets used by both demo hosts on .NET 10.
 
 BlazorThree and this demo are still preview features. Expect ongoing changes to the component API, supported scenarios, and documentation.
 
@@ -12,6 +12,10 @@ BlazorThree and this demo are still preview features. Expect ongoing changes to 
 
 ## Run
 
-dotnet run --project BlazorThree.Demo.csproj
+dotnet run --project ../BlazorThree.Demo.BlazorServer/BlazorThree.Demo.BlazorServer.csproj
+
+or
+
+dotnet run --project ../BlazorThree.Demo.BlazorWebAssembly/BlazorThree.Demo.BlazorWebAssembly.csproj
 
 Then browse to the local URL printed in the terminal.
