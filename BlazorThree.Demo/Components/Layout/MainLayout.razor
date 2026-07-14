@@ -1,6 +1,101 @@
 ﻿@inherits LayoutComponentBase
 
-@Body
+<div class="demo-layout-shell">
+    <aside class="demo-nav">
+        <h1>BlazorThree</h1>
+
+        <nav>
+            <NavLink href="/" Match="NavLinkMatch.All" class="demo-nav-link">Scene Playground</NavLink>
+            <NavLink href="/solar-system" class="demo-nav-link">Solar System</NavLink>
+        </nav>
+    </aside>
+
+    <main class="demo-content">
+        @Body
+    </main>
+</div>
+
+<style>
+    .demo-layout-shell {
+        display: grid;
+        grid-template-columns: 260px minmax(0, 1fr);
+        width: 100%;
+        height: 100vh;
+        overflow: hidden;
+        background: #04070f;
+    }
+
+    .demo-nav {
+        display: flex;
+        flex-direction: column;
+        gap: 0.4rem;
+        padding: 1.4rem 1rem;
+        border-right: 1px solid rgba(190, 205, 255, 0.18);
+        background: linear-gradient(180deg, rgba(12, 17, 30, 0.96) 0%, rgba(7, 10, 18, 0.96) 100%);
+        color: #d5defd;
+    }
+
+    .demo-nav h1 {
+        margin: 0;
+        font-size: 1.15rem;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+    }
+
+    .demo-nav p {
+        margin: 0 0 0.8rem;
+        font-size: 0.8rem;
+        color: rgba(213, 222, 253, 0.72);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+    }
+
+    .demo-nav nav {
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+    }
+
+    .demo-nav-link {
+        display: block;
+        padding: 0.7rem 0.8rem;
+        border: 1px solid rgba(173, 189, 245, 0.25);
+        border-radius: 0.65rem;
+        color: #d5defd;
+        text-decoration: none;
+        background: rgba(18, 27, 45, 0.45);
+        transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+    }
+
+    .demo-nav-link:hover {
+        color: #ffffff;
+        border-color: rgba(189, 205, 255, 0.72);
+        background: rgba(44, 62, 103, 0.72);
+    }
+
+    .demo-nav-link.active {
+        color: #0d1528;
+        background: #9bc6ff;
+        border-color: transparent;
+        font-weight: 600;
+    }
+
+    .demo-content {
+        min-width: 0;
+        min-height: 0;
+        height: 100%;
+    }
+
+    @@media (max-width: 900px) {
+        .demo-layout-shell {
+            grid-template-columns: 210px minmax(0, 1fr);
+        }
+
+        .demo-nav {
+            padding: 1rem 0.75rem;
+        }
+    }
+</style>
 
 <div id="blazor-error-ui" data-nosnippet>
     An unhandled error has occurred.

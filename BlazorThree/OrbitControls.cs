@@ -4,15 +4,15 @@ using Microsoft.AspNetCore.Components;
 namespace BlazorThree;
 
 /// <summary>
-/// Enables interactive orbit camera controls for the surrounding <see cref="Scene" />.
+/// Enables interactive orbit camera controls for the parent <see cref="Camera" />.
 /// </summary>
-public class OrbitControls : ComponentBase
+public class OrbitControls : ComponentBase, IDisposable
 {
     /// <summary>
-    /// Gets or sets the scene context.
+    /// Gets or sets the surrounding camera context.
     /// </summary>
     [CascadingParameter]
-    private SceneContext? SceneContext { get; set; }
+    private CameraContext? CameraContext { get; set; }
 
     /// <summary>
     /// Gets or sets a value indicating whether orbit controls are active.
@@ -37,11 +37,24 @@ public class OrbitControls : ComponentBase
     /// </summary>
     protected override void OnParametersSet()
     {
-        SceneContext?.SetOrbitControls(new OrbitControlsState
+        if (CameraContext is null)
+        {
+            throw new InvalidOperationException($"{nameof(OrbitControls)} must be nested inside {nameof(Camera)}.");
+        }
+
+        var state = new OrbitControlsState
         {
             Enabled = Enabled,
             EnableDamping = EnableDamping,
             DampingFactor = DampingFactor
-        });
+        };
+
+        CameraContext.SetOrbitControls?.Invoke(state);
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        CameraContext?.ClearOrbitControls?.Invoke();
     }
 }

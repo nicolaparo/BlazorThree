@@ -6,9 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <IsPackable>true</IsPackable>
-    <PackageId>BlazorThree</PackageId>
-    <Version>0.1.0-local.1</Version>
-    <Authors>BlazorThree Contributors</Authors>
+    <Version>0.1.0-preview</Version>
+    <Authors>Nicola Paro</Authors>
     <Description>Declarative Three.js scene components for Blazor.</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>

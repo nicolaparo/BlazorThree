@@ -8,13 +8,17 @@ namespace BlazorThree;
 /// <summary>
 /// Configures the active perspective camera used to render the surrounding <see cref="Scene" />.
 /// </summary>
-public class Camera : ComponentBase, IPositionable, IRotatable
+public class Camera : ComponentBase, IPositionable, IRotatable, IDisposable
 {
     private readonly TransitionHostContext transitionHostContext = new();
+
+    private readonly CameraContext cameraContext = new();
 
     private readonly Dictionary<string, TransitionState> transitions = new(StringComparer.Ordinal);
 
     private readonly Dictionary<string, AnimationState> animations = new(StringComparer.Ordinal);
+
+    private OrbitControlsState orbitControls = new();
 
     /// <summary>
     /// Gets or sets the scene context that receives camera updates.
@@ -75,7 +79,13 @@ public class Camera : ComponentBase, IPositionable, IRotatable
             Host = transitionHostContext,
             AllowedPropertyRoots = AnimatablePropertyRegistry.GetAnimatablePropertyRoots(typeof(Camera))
         });
-        builder.AddAttribute(2, nameof(CascadingValue<TransitionScopeContext>.ChildContent), ChildContent);
+        builder.AddAttribute(2, nameof(CascadingValue<TransitionScopeContext>.ChildContent), (RenderFragment)(contentBuilder =>
+        {
+            contentBuilder.OpenComponent<CascadingValue<CameraContext>>(0);
+            contentBuilder.AddAttribute(1, nameof(CascadingValue<CameraContext>.Value), cameraContext);
+            contentBuilder.AddAttribute(2, nameof(CascadingValue<CameraContext>.ChildContent), ChildContent);
+            contentBuilder.CloseComponent();
+        }));
         builder.CloseComponent();
     }
 
@@ -84,6 +94,18 @@ public class Camera : ComponentBase, IPositionable, IRotatable
     /// </summary>
     protected override void OnInitialized()
     {
+        cameraContext.SetOrbitControls = state =>
+        {
+            orbitControls = state;
+            SceneContext?.SetOrbitControls(orbitControls);
+        };
+
+        cameraContext.ClearOrbitControls = () =>
+        {
+            orbitControls = new OrbitControlsState();
+            SceneContext?.SetOrbitControls(orbitControls);
+        };
+
         transitionHostContext.UpsertTransition = transition =>
         {
             transitions[transition.Property] = transition;
@@ -133,5 +155,13 @@ public class Camera : ComponentBase, IPositionable, IRotatable
             Transitions = transitions.Values.OrderBy(transition => transition.Property, StringComparer.Ordinal).ToArray(),
             Animations = animations.Values.OrderBy(animation => animation.Id, StringComparer.Ordinal).ToArray()
         });
+    }
+
+    /// <inheritdoc />
+    public void Dispose()
+    {
+        cameraContext.ClearOrbitControls?.Invoke();
+        cameraContext.SetOrbitControls = null;
+        cameraContext.ClearOrbitControls = null;
     }
 }

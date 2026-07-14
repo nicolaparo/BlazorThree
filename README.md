@@ -1,8 +1,14 @@
 # BlazorThree
 
+[![NuGet version](https://img.shields.io/nuget/v/BlazorThree?label=nuget)](https://www.nuget.org/packages/BlazorThree/)
+[![NuGet downloads](https://img.shields.io/nuget/dt/BlazorThree?label=downloads)](https://www.nuget.org/packages/BlazorThree/)
+[![GitHub stars](https://img.shields.io/github/stars/nicolaparo/BlazorThree?style=social)](https://github.com/nicolaparo/BlazorThree)
+[![GitHub issues](https://img.shields.io/github/issues/nicolaparo/BlazorThree)](https://github.com/nicolaparo/BlazorThree/issues)
+
 BlazorThree is a .NET 10 Razor Class Library for building Three.js scenes with declarative Blazor components. You compose a scene graph in Razor, and the library keeps a browser-side Three.js runtime synchronized for rendering, animation, model playback, and scene interaction.
 
-![BlazorThree demo](demo-1.png)
+![BlazorThree demo 1](demo-1.png)
+![BlazorThree demo 2](demo-2.png)
 
 ## Why BlazorThree
 
@@ -58,9 +64,10 @@ No service registration is required. `Scene` loads the JavaScript bridge automat
 
 ```razor
 <Scene Width="100%" Height="520px" ClearColor="#101925">
-   <Camera Fov="65" Position="@(new(0f, 1.4f, 7f))" />
+   <Camera Fov="65" Position="@(new(0f, 1.4f, 7f))">
+      <OrbitControls Enabled="true" EnableDamping="true" DampingFactor="0.09" />
+   </Camera>
    <Light Type="LightDefinitions.Directional" Intensity="1.6" Position="@(new(6f, 8f, 3f))" />
-   <OrbitControls Enabled="true" EnableDamping="true" DampingFactor="0.09" />
 
    <Group Position="@(stageActive ? new(0f, 0.9f, 0f) : Vector3.Zero)"
           Rotation="@(stageActive ? new(0f, 1.8f, 0f) : Vector3.Zero)"
@@ -103,7 +110,7 @@ Changing a node property such as `Position`, `Rotation`, or `Scale` at runtime a
 - `Scene` hosts the renderer, controls canvas size and clear color, and owns scene-level callbacks
 - `Camera` configures a perspective camera with field of view, position, and rotation
 - `Light` publishes one active light using `LightDefinitions.Directional`, `LightDefinitions.Point`, or `LightDefinitions.Ambient`
-- `OrbitControls` enables browser-side orbit interaction with optional damping
+- `OrbitControls` enables browser-side orbit interaction with optional damping and must be nested under `Camera`
 
 ### Hierarchy and transforms
 
@@ -291,3 +298,20 @@ The demo reflects the current preview feature set and is not a statement of stab
 If you need the underlying rendering concepts, start with the Three.js scene primer:
 
 https://www.threejs.pro/docs/#manual/en/introduction/Creating-a-scene
+
+## Support and contribute
+
+Thanks for checking out BlazorThree ❤️
+
+This project is built in public, and every bit of support genuinely helps keep it moving forward 🚀
+
+If it helped you, here are simple ways to support it:
+
+- ⭐ Star the repository: https://github.com/nicolaparo/BlazorThree
+- 📦 Follow package updates on NuGet: https://www.nuget.org/packages/BlazorThree/
+
+Want to collaborate? I'd love your help 🤝
+
+- 🍴 Fork the repository and open a pull request
+- 🐛 Open an issue for bugs, feature ideas, or questions
+- 💬 Share feedback from real-world usage to help shape the roadmap

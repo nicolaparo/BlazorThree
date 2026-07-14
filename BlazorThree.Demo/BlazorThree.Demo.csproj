@@ -7,11 +7,11 @@
     <BlazorDisableThrowNavigationException>true</BlazorDisableThrowNavigationException>
   </PropertyGroup>
 
-  <!--<ItemGroup>
-    <PackageReference Include="BlazorThree" Version="0.1.0-local.1" />
-  </ItemGroup>-->
   <ItemGroup>
-    <ProjectReference Include="../BlazorThree/BlazorThree.csproj" />
+    <PackageReference Include="BlazorThree" Version="0.1.0-preview" />
   </ItemGroup>
+  <!-- <ItemGroup>
+    <ProjectReference Include="../BlazorThree/BlazorThree.csproj" />
+  </ItemGroup> -->
 
 </Project>

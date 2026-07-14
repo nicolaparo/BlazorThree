@@ -8,6 +8,7 @@
     <Scene Width="100%" Height="100%" ClearColor="#101925">
         <Camera Fov="65" Position="@(cinematicCamera ? new(0f, 2.2f, 9f) : new(0f, 1.4f, 7f))">
             <Transition Property="@nameof(Camera.Position)" DurationMs="900" Easing="@Easings.EaseInOutQuad" />
+            <OrbitControls Enabled="true" EnableDamping="true" DampingFactor="0.09" />
         </Camera>
         <Light Type="LightDefinitions.Directional"
                Intensity="@(dramaticLight ? 2.2 : 1.3)"
@@ -15,8 +16,6 @@
                Color="@(dramaticLight ? "#ffd2a1" : "#ffffff")">
             <Transition Properties="@(new[] { nameof(Light.Intensity), nameof(Light.Position), nameof(Light.Color) })" DurationMs="900" Easing="@Easings.EaseInOutQuad" />
         </Light>
-        <OrbitControls Enabled="true" EnableDamping="true" DampingFactor="0.09" />
-
         <Group Position="@(stageActive ? new(0f, 0.9f, 0f) : Vector3.Zero)"
                Rotation="@(stageActive ? new(0f, 1.8f, 0f) : Vector3.Zero)"
                Scale="@(stageActive ? new(-1f, -1f, -1f) : Vector3.One)">
@@ -54,9 +53,10 @@
 
                     <Transition Property="@nameof(Mesh.Scale)" DurationMs="650" Easing="@Easings.EaseInOutQuad"></Transition>
                     <MeshStandardMaterial TextureUrl="https://threejs.org/examples/textures/uv_grid_opengl.jpg"
+                                          Color="@(sphereMaterialCool ? "#62b4ff" : "#ffbf69")"
                                           Metalness="0.05"
                                           Roughness="0.55">
-                        @* <Transition Property="@nameof(MeshStandardMaterial.Color)" DurationMs="650" Easing="@Easings.EaseInOutQuad" /> *@
+                        <Transition Property="@nameof(MeshStandardMaterial.Color)" DurationMs="200" Easing="@Easings.EaseInOutQuad" />
                     </MeshStandardMaterial>
                     <SphereGeometry Radius="@(sphereGeometryLarge ? 1.2 : 0.9)" WidthSegments="48" HeightSegments="24">
                         <Transition Property="@nameof(SphereGeometry.Radius)" DurationMs="200" Easing="@Easings.EaseInOutQuad" />
@@ -85,44 +85,38 @@
         <button class="btn btn-secondary" @onclick="() => dramaticLight = !dramaticLight">
             Light Transition (@(dramaticLight ? "dramatic" : "neutral"))
         </button>
-        <div class="row">
-            <div class="col">
+        <div class="control-list">
+            <div class="control-item">
                 <input id="box-visible" type="checkbox" @bind="boxVisible" />
-                <label for="box-visible">Box Visible</label>
+                <label for="box-visible">Show box</label>
             </div>
-            <div class="col">
+            <div class="control-item">
                 <input id="sphere-visible" type="checkbox" @bind="sphereVisible" />
-                <label for="sphere-visible">Sphere Visible</label>
+                <label for="sphere-visible">Show sphere</label>
             </div>
-        </div>
-        <div class="row">
-            <div class="col">
+            <div class="control-item">
                 <input id="box-geometry-wide" type="checkbox" @bind="boxGeometryWide" />
-                <label for="box-geometry-wide">Box Geometry Width</label>
+                <label for="box-geometry-wide">Box: use wide shape</label>
             </div>
-            <div class="col">
+            <div class="control-item">
                 <input id="box-geometry-tall" type="checkbox" @bind="boxGeometryTall" />
-                <label for="box-geometry-tall">Box Geometry Height</label>
+                <label for="box-geometry-tall">Box: use tall shape</label>
             </div>
-        </div>
-        <div class="row">
-            <div class="col">
+            <div class="control-item">
                 <input id="box-material-warm" type="checkbox" @bind="boxMaterialWarm" />
-                <label for="box-material-warm">Box Material Color</label>
+                <label for="box-material-warm">Box: warm material color</label>
             </div>
-            <div class="col">
+            <div class="control-item">
                 <input id="box-outline-on" type="checkbox" @bind="boxOutlineOn" />
-                <label for="box-outline-on">Box Outline Opacity</label>
+                <label for="box-outline-on">Box: show outline</label>
             </div>
-        </div>
-        <div class="row">
-            <div class="col">
+            <div class="control-item">
                 <input id="sphere-geometry-large" type="checkbox" @bind="sphereGeometryLarge" />
-                <label for="sphere-geometry-large">Sphere Geometry Radius</label>
+                <label for="sphere-geometry-large">Sphere: larger size</label>
             </div>
-            <div class="col">
+            <div class="control-item">
                 <input id="sphere-material-cool" type="checkbox" @bind="sphereMaterialCool" />
-                <label for="sphere-material-cool">Sphere Material Color</label>
+                <label for="sphere-material-cool">Sphere: cool material color</label>
             </div>
         </div>
     </aside>
@@ -131,8 +125,8 @@
 <style>
     .scene-page {
         position: relative;
-        width: 100vw;
-        height: 100vh;
+        width: 100%;
+        height: 100%;
     }
 
     .right-panel {
@@ -149,6 +143,23 @@
         gap: 0.75rem;
         color: #ffffff;
         z-index: 5;
+    }
+
+    .control-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+    }
+
+    .control-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        line-height: 1.3;
+    }
+
+    .control-item label {
+        cursor: pointer;
     }
 
         .right-panel h2 {

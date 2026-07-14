@@ -4,85 +4,82 @@
 
 <PageTitle>BlazorThree Demo</PageTitle>
 
-<div class="d-flex w-100 h-100">
+<div class="position-relative w-100 h-100 overflow-hidden">
 
-    <Scene Width="100%" Height="100%" ClearColor="#101925" BackgroundTextureUrl="/textures/solar-system/2k_stars_milky_way.jpg" BackgroundTextureSizing="cover">
+    @{
+        var selectedPlanetInfo = selectedPlanet ?? solarSystem.First();
 
-        @{
-            var selectedPlanetInfo = solarSystem.FirstOrDefault(p => p.Name == selectedPlanet) ?? solarSystem.First();
+        var cameraLookAt = ComputePlanetPosition(selectedPlanetInfo);
+        var cameraPosition = cameraLookAt + new Vector3(0, 0, z: MathF.Sqrt(selectedPlanetInfo.RadiusKm / 10));
 
-            var cameraPosition = new Vector3(MathF.Sqrt(selectedPlanetInfo.DistanceFromSunKm / 500), 0, z: 
-                MathF.Sqrt(selectedPlanetInfo.RadiusKm / 10));
-            var cameraLookAt = new Vector3(MathF.Sqrt(selectedPlanetInfo.DistanceFromSunKm / 500), 0, 0);
-        }
+    }
 
-        <Camera Fov="50" Position="@(cameraPosition)" LookAt="@(cameraLookAt)">
-            <Transition DurationMs="1000" Easing="@Easings.EaseInOutQuad" 
-                        Properties="[nameof(Camera.Position), nameof(Camera.LookAt)]" />
-        </Camera>
+    <div class="w-100 h-100">
+        <Scene Width="100%" Height="100%" ClearColor="#101925" BackgroundTextureUrl="/textures/solar-system/2k_stars_milky_way.jpg" BackgroundTextureSizing="cover">
 
-        <Light Type="LightDefinitions.Ambient" Color="#ffffff" Intensity="1" />
-        @* <OrbitControls Enabled="true" EnableDamping="true" DampingFactor="0.09" /> *@
 
-        @foreach (var (index, planet) in solarSystem.Index())
-        {
-            // place the planets in a line for now, just to show them all.
-            // we need to consider the different sizes of the planets to show them next to each other.
-            var position = new Vector3(index * 100, 0, 0);
+            <Camera Fov="50" Position="@(cameraPosition)" LookAt="@(cameraLookAt)">
+                <Transition DurationMs="1000" Easing="@Easings.EaseInOutQuad"
+                            Properties="[nameof(Camera.Position), nameof(Camera.LookAt)]" />
+            </Camera>
 
-            <Group Position="@(new(MathF.Sqrt(planet.DistanceFromSunKm / 500), 0, 0))"
-                   Rotation="new(0, 0, DegToRad(planet.TiltDegrees))">
+            <Light Type="LightDefinitions.Ambient" Color="#ffffff" Intensity="1" />
 
-                @if (planet.Name == "Sun")
-                {
-                    <Light Type="LightDefinitions.Point" Color="#ffd280" Intensity="1200000" />
-                }
+            @foreach (var (index, planet) in solarSystem.Index())
+            {
+                <Group Position="@(ComputePlanetPosition(planet))"
+                       Rotation="new(0, 0, DegToRad(planet.TiltDegrees))">
 
-                <Mesh>
-                    <SphereGeometry Radius="@(MathF.Sqrt(planet.RadiusKm / 100))" WidthSegments="48" HeightSegments="48" />
                     @if (planet.Name == "Sun")
                     {
-                        <MeshPhongMaterial TextureUrl="@Assets[planet.TextureUri]" Color="#ffffff" Emissive="#ffb347" Specular="#221100" Shininess="8" />
+                        <Light Type="LightDefinitions.Point" Color="#ffd280" Intensity="1200000" />
                     }
-                    else
-                    {
-                        <MeshStandardMaterial TextureUrl="@Assets[planet.TextureUri]" Color="#ffffff" />
-                    }
-                    <Animation DurationMs="@((int)(planet.DayDurationHours * 2500 / 24))" Loop="true" Active="true" Easing="@Easings.Linear">
-                        <Keyframe Offset="0" Property="@nameof(Mesh.Rotation)" Value="@(new Vector3(0, 0, 0))" />
-                        <Keyframe Offset="100" Property="@nameof(Mesh.Rotation)" Value="@(new Vector3(0, 2 * MathF.PI, 0))" />
-                    </Animation>
-                </Mesh>
-            </Group>
-        }
 
-    </Scene>
+                    <Mesh>
+                        <SphereGeometry Radius="@(MathF.Sqrt(planet.RadiusKm / 100))" WidthSegments="48" HeightSegments="48" />
+                        @if (planet.Name == "Sun")
+                        {
+                            <MeshPhongMaterial TextureUrl="@Assets[planet.TextureUri]" Color="#ffffff" Emissive="#ffb347" Specular="#221100" Shininess="8" />
+                        }
+                        else
+                        {
+                            <MeshStandardMaterial TextureUrl="@Assets[planet.TextureUri]" Color="#ffffff" />
+                        }
+                        <Animation DurationMs="@((int)(planet.DayDurationHours * 2500 / 24))" Loop="true" Active="true" Easing="@Easings.Linear">
+                            <Keyframe Offset="0" Property="@nameof(Mesh.Rotation)" Value="@(new Vector3(0, 0, 0))" />
+                            <Keyframe Offset="100" Property="@nameof(Mesh.Rotation)" Value="@(new Vector3(0, 2 * MathF.PI, 0))" />
+                        </Animation>
+                    </Mesh>
+                </Group>
+            }
 
-    <div class="flex-grow-0 flex-shrink-0 h-100" style="width: 380px">
-
-        @foreach (var planet in solarSystem)
-        {
-            <div class="d-flex flex-column p-2 border-bottom" style="cursor: pointer" @onclick="@(() => selectedPlanet = planet.Name)">
-                <div class="d-flex align-items-center">
-                    <img src="@Assets[planet.TextureUri]" alt="@planet.Name" width="48" height="48" class="me-2 rounded-circle" />
-                    <div>
-                        <div class="fw-bold">@planet.Name</div>
-                        <div class="text-muted">@planet.RadiusKm km radius</div>
-                    </div>
-                </div>
-                @if (selectedPlanet == planet.Name)
-                {
-                    <div class="mt-2">
-                        <div>Day Duration: @planet.DayDurationHours hours</div>
-                        <div>Tilt: @planet.TiltDegrees°</div>
-                        <div>Distance from Sun: @planet.DistanceFromSunKm km</div>
-                    </div>
-                }
-            </div>
-        }
+        </Scene>
     </div>
 
-    
+    <footer class="position-absolute start-0 end-0 bottom-0 border-top" style="max-height: 220px; overflow-y: auto; z-index: 2; background: rgba(20, 26, 38, 0.78); backdrop-filter: blur(6px);">
+        <div class="d-flex flex-wrap justify-content-center gap-3 p-3">
+
+            @foreach (var p in solarSystem)
+            {
+                var planet = p;
+
+                <button type="button" class="btn btn-outline-secondary @(planet == selectedPlanetInfo ? "active" : "")"
+                        @onclick="() => selectedPlanet = planet">
+                    <div class="d-flex align-items-center">
+                        <img src="@Assets[planet.TextureUri]" alt="@planet.Name" width="24" height="24" class="me-2 rounded-circle" />
+                        <div>@planet.Name</div>
+                    </div>
+                </button>
+            }
+        </div>
+
+        <div class="px-3 pb-3 text-light text-center">
+            <div>Day Duration: @selectedPlanetInfo.DayDurationHours hours</div>
+            <div>Tilt: @selectedPlanetInfo.TiltDegrees°</div>
+            <div>Distance from Sun: @selectedPlanetInfo.DistanceFromSunKm km</div>
+        </div>
+    </footer>
+
 </div>
 
 @code {
@@ -90,10 +87,11 @@
     public record PlanetInfo(string Name, string TextureUri, float RadiusKm, float DayDurationHours, float TiltDegrees, float DistanceFromSunKm);
 
     private static float DegToRad(float deg) => deg * MathF.PI / 180f;
+    private static Vector3 ComputePlanetPosition(PlanetInfo planet) => new(MathF.Sqrt(planet.DistanceFromSunKm / 500), 0, 0);
 
-    private string selectedPlanet = "";
+    private PlanetInfo? selectedPlanet;
 
-    private IReadOnlySet<PlanetInfo> solarSystem = new HashSet<PlanetInfo>()
+    private readonly IReadOnlySet<PlanetInfo> solarSystem = new HashSet<PlanetInfo>()
     {
         new PlanetInfo("Sun", "/textures/solar-system/2k_sun.jpg", 696_340, DayDurationHours: 609.12f, TiltDegrees: 7.25f, DistanceFromSunKm: 0),
         new PlanetInfo("Mercury", "/textures/solar-system/2k_mercury.jpg", 2_439, DayDurationHours: 1407.6f, TiltDegrees: 0.034f, DistanceFromSunKm: 57_910_000),
