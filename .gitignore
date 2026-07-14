@@ -34,3 +34,15 @@ Thumbs.db
 *.exe
 *.dll
 *.pdb
+
+# Generated GitHub Pages output (keep docs/res tracked)
+docs/_content/
+docs/_framework/
+docs/.nojekyll
+docs/404.html
+docs/index.html
+docs/index.html.br
+docs/index.html.gz
+docs/BlazorThree.Demo.BlazorWebAssembly.styles.css
+docs/BlazorThree.Demo.BlazorWebAssembly.styles.css.br
+docs/BlazorThree.Demo.BlazorWebAssembly.styles.css.gz

@@ -11,7 +11,7 @@ $ProjectPath = "demo/BlazorThree.Demo.BlazorWebAssembly/BlazorThree.Demo.BlazorW
 $Configuration = "Release"
 $Framework = "net10.0"
 $BaseHref = "/BlazorThree/"
-$OutputPath = "docs"
+$OutputPath = "artifacts/github-pages/site"
 $CleanOutput = $true
 
 $resolvedProjectPath = Join-Path $repoRoot $ProjectPath
