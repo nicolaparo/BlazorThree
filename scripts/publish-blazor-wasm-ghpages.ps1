@@ -69,7 +69,7 @@ Set-Content -Path (Join-Path $resolvedTargetRepoPath ".gitattributes") -Value "*
 
 Write-Host "Copying static site to '$resolvedTargetRepoPath'..." -ForegroundColor Cyan
 Get-ChildItem -Path $resolvedTargetRepoPath -Force |
-    Where-Object { $_.Name -notin ".git", ".gitattributes" } |
+    Where-Object { $_.Name -notin ".git", ".gitattributes", "README.md" } |
     Remove-Item -Recurse -Force
 
 Copy-Item -Path (Join-Path $siteSource "*") -Destination $resolvedTargetRepoPath -Recurse -Force
