@@ -51,7 +51,7 @@
                       OnClick='() => selectedElement = "sphere"'>
 
                     <Transition Property="@nameof(Mesh.Scale)" DurationMs="650" Easing="@Easings.EaseInOutQuad"></Transition>
-                    <MeshStandardMaterial TextureUrl="/_content/BlazorThree.Demo.Shared/textures/uv_grid_opengl.jpg"
+                    <MeshStandardMaterial TextureUrl="_content/BlazorThree.Demo.Shared/textures/uv_grid_opengl.jpg"
                                           Color="@(sphereMaterialCool ? "#62b4ff" : "#ffbf69")"
                                           Metalness="0.05"
                                           Roughness="0.55">

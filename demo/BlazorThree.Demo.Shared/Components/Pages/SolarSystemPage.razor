@@ -14,7 +14,7 @@
     }
 
     <div class="w-100 h-100">
-        <Scene Width="100%" Height="100%" ClearColor="#101925" BackgroundTextureUrl="/_content/BlazorThree.Demo.Shared/textures/solar-system/2k_stars_milky_way.jpg" BackgroundTextureSizing="cover">
+        <Scene Width="100%" Height="100%" ClearColor="#101925" BackgroundTextureUrl="_content/BlazorThree.Demo.Shared/textures/solar-system/2k_stars_milky_way.jpg" BackgroundTextureSizing="cover">
 
 
             <Camera Fov="50" Position="@(cameraPosition)" LookAt="@(cameraLookAt)">
@@ -92,15 +92,15 @@
 
     private readonly IReadOnlySet<PlanetInfo> solarSystem = new HashSet<PlanetInfo>()
     {
-        new PlanetInfo("Sun", "/_content/BlazorThree.Demo.Shared/textures/solar-system/2k_sun.jpg", 696_340, DayDurationHours: 609.12f, TiltDegrees: 7.25f, DistanceFromSunKm: 0),
-        new PlanetInfo("Mercury", "/_content/BlazorThree.Demo.Shared/textures/solar-system/2k_mercury.jpg", 2_439, DayDurationHours: 1407.6f, TiltDegrees: 0.034f, DistanceFromSunKm: 57_910_000),
-        new PlanetInfo("Venus", "/_content/BlazorThree.Demo.Shared/textures/solar-system/2k_venus_surface.jpg", 6_052, DayDurationHours: 5832.5f, TiltDegrees: 177.4f, DistanceFromSunKm: 108_200_000),
-        new PlanetInfo("Earth", "/_content/BlazorThree.Demo.Shared/textures/solar-system/2k_earth_daymap.jpg", 6_371, DayDurationHours: 24, TiltDegrees: 23.44f, DistanceFromSunKm: 149_600_000),
-        new PlanetInfo("Mars", "/_content/BlazorThree.Demo.Shared/textures/solar-system/2k_mars.jpg", 3_390, DayDurationHours: 24.6f, TiltDegrees: 25.19f, DistanceFromSunKm: 227_900_000),
-        new PlanetInfo("Jupiter", "/_content/BlazorThree.Demo.Shared/textures/solar-system/2k_jupiter.jpg", 69_911, DayDurationHours: 9.9f, TiltDegrees: 3.13f, DistanceFromSunKm: 778_500_000),
-        new PlanetInfo("Saturn", "/_content/BlazorThree.Demo.Shared/textures/solar-system/2k_saturn.jpg", 58_232, DayDurationHours: 10.7f, TiltDegrees: 26.73f, DistanceFromSunKm: 1_434_000_000),
-        new PlanetInfo("Uranus", "/_content/BlazorThree.Demo.Shared/textures/solar-system/2k_uranus.jpg", 25_362, DayDurationHours: 17.2f, TiltDegrees: 97.77f, DistanceFromSunKm: 2_871_000_000),
-        new PlanetInfo("Neptune", "/_content/BlazorThree.Demo.Shared/textures/solar-system/2k_neptune.jpg", 24_622, DayDurationHours: 16.1f, TiltDegrees: 28.32f, DistanceFromSunKm: 4_495_000_000),
+        new PlanetInfo("Sun", "_content/BlazorThree.Demo.Shared/textures/solar-system/2k_sun.jpg", 696_340, DayDurationHours: 609.12f, TiltDegrees: 7.25f, DistanceFromSunKm: 0),
+        new PlanetInfo("Mercury", "_content/BlazorThree.Demo.Shared/textures/solar-system/2k_mercury.jpg", 2_439, DayDurationHours: 1407.6f, TiltDegrees: 0.034f, DistanceFromSunKm: 57_910_000),
+        new PlanetInfo("Venus", "_content/BlazorThree.Demo.Shared/textures/solar-system/2k_venus_surface.jpg", 6_052, DayDurationHours: 5832.5f, TiltDegrees: 177.4f, DistanceFromSunKm: 108_200_000),
+        new PlanetInfo("Earth", "_content/BlazorThree.Demo.Shared/textures/solar-system/2k_earth_daymap.jpg", 6_371, DayDurationHours: 24, TiltDegrees: 23.44f, DistanceFromSunKm: 149_600_000),
+        new PlanetInfo("Mars", "_content/BlazorThree.Demo.Shared/textures/solar-system/2k_mars.jpg", 3_390, DayDurationHours: 24.6f, TiltDegrees: 25.19f, DistanceFromSunKm: 227_900_000),
+        new PlanetInfo("Jupiter", "_content/BlazorThree.Demo.Shared/textures/solar-system/2k_jupiter.jpg", 69_911, DayDurationHours: 9.9f, TiltDegrees: 3.13f, DistanceFromSunKm: 778_500_000),
+        new PlanetInfo("Saturn", "_content/BlazorThree.Demo.Shared/textures/solar-system/2k_saturn.jpg", 58_232, DayDurationHours: 10.7f, TiltDegrees: 26.73f, DistanceFromSunKm: 1_434_000_000),
+        new PlanetInfo("Uranus", "_content/BlazorThree.Demo.Shared/textures/solar-system/2k_uranus.jpg", 25_362, DayDurationHours: 17.2f, TiltDegrees: 97.77f, DistanceFromSunKm: 2_871_000_000),
+        new PlanetInfo("Neptune", "_content/BlazorThree.Demo.Shared/textures/solar-system/2k_neptune.jpg", 24_622, DayDurationHours: 16.1f, TiltDegrees: 28.32f, DistanceFromSunKm: 4_495_000_000),
     };
 
 }
