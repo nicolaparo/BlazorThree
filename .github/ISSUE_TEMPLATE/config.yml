@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Live demo
+    url: https://nicolaparo.github.io/BlazorThree-demo
+    about: Check the published demo before reporting demo-host issues.
+  - name: Security issue
+    url: https://github.com/nicolaparo/BlazorThree/security
+    about: Report vulnerabilities privately through GitHub Security.

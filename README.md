@@ -7,6 +7,8 @@
 
 BlazorThree is a .NET 10 Razor Class Library for building Three.js scenes with declarative Blazor components. You compose a scene graph in Razor, and the library keeps a browser-side Three.js runtime synchronized for rendering, animation, model playback, and scene interaction.
 
+Live demo: https://nicolaparo.github.io/BlazorThree-demo
+
 ![BlazorThree demo 1](docs/res/demo-1.png)
 ![BlazorThree demo 2](docs/res/demo-2.png)
 
@@ -23,6 +25,10 @@ Compared to other libraries, BlazorThree centers the component model as the prim
 The goal is predictable, maintainable 3D UI composition for Blazor-first applications.
 
 ## Demo app quickstart
+
+If you want to see the current published demo first, open:
+
+- https://nicolaparo.github.io/BlazorThree-demo
 
 If you want to try the demo app from this repository instead of consuming the NuGet package directly:
 
@@ -64,7 +70,7 @@ Preview note: this package is still in preview and should be treated as pre-rele
 Add the package reference to your app:
 
 ```xml
-<PackageReference Include="BlazorThree" Version="0.1.0-local.1" />
+<PackageReference Include="BlazorThree" Version="0.1.0-preview" />
 ```
 
 Import the namespaces where you author scenes, typically in `_Imports.razor`:
@@ -320,6 +326,10 @@ The repository contains:
 
 The demo reflects the current preview feature set and is not a statement of stable API guarantees.
 
+## Roadmap
+
+The current roadmap lives in [docs/roadmap.md](docs/roadmap.md). If you want to contribute, start there and look for small issues around docs, demos, CI, rendering behavior, and interaction edge cases.
+
 ## Three.js reference
 
 If you need the underlying rendering concepts, start with the Three.js scene primer:
@@ -328,17 +338,15 @@ https://www.threejs.pro/docs/#manual/en/introduction/Creating-a-scene
 
 ## Support and contribute
 
-Thanks for checking out BlazorThree ❤️
-
-This project is built in public, and every bit of support genuinely helps keep it moving forward 🚀
-
 If it helped you, here are simple ways to support it:
 
-- ⭐ Star the repository: https://github.com/nicolaparo/BlazorThree
-- 📦 Follow package updates on NuGet: https://www.nuget.org/packages/BlazorThree/
+- Star the repository: https://github.com/nicolaparo/BlazorThree
+- Try the live demo: https://nicolaparo.github.io/BlazorThree-demo
+- Follow package updates on NuGet: https://www.nuget.org/packages/BlazorThree/
 
-Want to collaborate? I'd love your help 🤝
+If you want to contribute:
 
-- 🍴 Fork the repository and open a pull request
-- 🐛 Open an issue for bugs, feature ideas, or questions
-- 💬 Share feedback from real-world usage to help shape the roadmap
+- Read [CONTRIBUTING.md](CONTRIBUTING.md)
+- Open an issue for bugs, feature ideas, or questions
+- Start with [docs/roadmap.md](docs/roadmap.md) for current contribution priorities
+- Fork the repository and open a pull request
