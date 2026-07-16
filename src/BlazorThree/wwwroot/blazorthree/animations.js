@@ -429,6 +429,33 @@ function applyPropertyPath({ object3D, material, geometry, outline, allowFov, pr
         return;
     }
 
+    const { root, localParts } = resolvePropertyRoot({ object3D, material, geometry, outline, parts });
+    if (!root || !localParts.length) {
+        return;
+    }
+
+    const leaf = localParts[localParts.length - 1];
+    const handler = propertyHandlers[leaf];
+    if (handler) {
+        handler({ root, localParts, allowFov, propertyValue });
+        return;
+    }
+
+    writePathValue(root, localParts, propertyValue);
+}
+
+const propertyHandlers = Object.freeze({
+    position: applyVectorPathValue,
+    rotation: applyVectorPathValue,
+    scale: applyVectorPathValue,
+    up: applyVectorPathValue,
+    lookat: applyLookAtPathValue,
+    fov: applyFovPathValue,
+    color: applyColorPathValue,
+    opacity: applyOpacityPathValue
+});
+
+function resolvePropertyRoot({ object3D, material, geometry, outline, parts }) {
     let root = object3D;
     let startIndex = 0;
 
@@ -443,89 +470,73 @@ function applyPropertyPath({ object3D, material, geometry, outline, allowFov, pr
         startIndex = 1;
     }
 
-    if (!root) {
+    return {
+        root,
+        localParts: parts.slice(startIndex)
+    };
+}
+
+function applyVectorPathValue({ root, localParts, propertyValue }) {
+    const vector = asVector3(propertyValue);
+    if (!vector) {
         return;
     }
 
-    const localParts = parts.slice(startIndex);
-    if (!localParts.length) {
+    const target = readPathValue(root, localParts);
+    if (target?.set) {
+        target.set(vector.x, vector.y, vector.z);
+    }
+}
+
+function applyLookAtPathValue({ root, propertyValue }) {
+    const vector = asVector3(propertyValue);
+    if (!vector || !root.lookAt) {
         return;
     }
 
-    const leaf = localParts[localParts.length - 1];
-    if (leaf === "position" || leaf === "rotation" || leaf === "scale") {
-        const vector = asVector3(propertyValue);
-        if (!vector) {
-            return;
-        }
+    root.lookAt(vector.x, vector.y, vector.z);
+}
 
-        const target = readPathValue(root, localParts);
-        if (target?.set) {
-            target.set(vector.x, vector.y, vector.z);
-        }
+function applyFovPathValue({ root, allowFov, propertyValue }) {
+    if (!allowFov || typeof propertyValue !== "number") {
         return;
     }
 
-    if (leaf === "up") {
-        const vector = asVector3(propertyValue);
-        if (!vector) {
-            return;
-        }
+    root.fov = propertyValue;
+    root.updateProjectionMatrix?.();
+}
 
-        const target = readPathValue(root, localParts);
-        if (target?.set) {
-            target.set(vector.x, vector.y, vector.z);
-        }
+function applyColorPathValue({ root, localParts, propertyValue }) {
+    const color = asColor(propertyValue);
+    if (!color) {
         return;
     }
 
-    if (leaf === "lookat") {
-        const vector = asVector3(propertyValue);
-        if (!vector || !root.lookAt) {
-            return;
-        }
-
-        root.lookAt(vector.x, vector.y, vector.z);
+    const target = readPathValue(root, localParts);
+    if (target?.setRGB) {
+        target.setRGB(color.r, color.g, color.b);
         return;
     }
 
-    if (leaf === "fov" && allowFov && typeof propertyValue === "number") {
-        root.fov = propertyValue;
-        root.updateProjectionMatrix?.();
+    if (target?.set) {
+        target.set(toColorHex(color));
         return;
     }
 
-    if (leaf === "color") {
-        const color = asColor(propertyValue);
-        if (!color) {
-            return;
-        }
+    writePathValue(root, localParts, toColorHex(color));
+}
 
-        const target = readPathValue(root, localParts);
-        if (target?.setRGB) {
-            target.setRGB(color.r, color.g, color.b);
-            return;
-        }
-
-        if (target?.set) {
-            target.set(toColorHex(color));
-            return;
-        }
-
-        writePathValue(root, localParts, toColorHex(color));
-        return;
-    }
-
-    if (leaf === "opacity" && typeof propertyValue === "number") {
-        writePathValue(root, localParts, propertyValue);
-        if (root && Object.prototype.hasOwnProperty.call(root, "transparent")) {
-            root.transparent = propertyValue < 1;
-            root.needsUpdate = true;
-        }
+function applyOpacityPathValue({ root, localParts, propertyValue }) {
+    if (typeof propertyValue !== "number") {
         return;
     }
 
     writePathValue(root, localParts, propertyValue);
+
+    if (root && Object.prototype.hasOwnProperty.call(root, "transparent")) {
+        root.transparent = propertyValue < 1;
+        root.needsUpdate = true;
+    }
 }
 
 function normalizePropertyPath(property) {

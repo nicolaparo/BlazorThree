@@ -3,7 +3,7 @@ namespace BlazorThree.Engine;
 /// <summary>
 /// Represents an animation descriptor published by a host component.
 /// </summary>
-internal sealed class AnimationState
+public sealed class AnimationState
 {
     /// <summary>
     /// Gets or sets the stable animation identifier.

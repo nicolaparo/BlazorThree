@@ -403,122 +403,67 @@ public partial class Scene
             removeLightIds = delta.RemoveLightIds,
             orbitControlsChanged = delta.OrbitControlsChanged,
             orbitControls = delta.OrbitControlsChanged ? delta.OrbitControls : null,
-            upsertGroups = delta.UpsertGroups.Select(group => new
+            upsertNodes = delta.UpsertNodes.Select(node =>
             {
-                id = group.Id,
-                parentId = group.ParentId,
-                className = group.ClassName,
-                transitions = group.Transitions.Select(transition => new
+                var meshNode = node as MeshState;
+                var modelNode = node as ModelState;
+
+                return new
                 {
-                    property = transition.Property,
-                    durationMs = transition.DurationMs,
-                    easing = transition.Easing
-                }),
-                animations = group.Animations.Select(animation => new
-                {
-                    id = animation.Id,
-                    name = animation.Name,
-                    durationMs = animation.DurationMs,
-                    active = animation.Active,
-                    loop = animation.Loop,
-                    easing = animation.Easing,
-                    keyframes = animation.Keyframes.Select(keyframe => new
+                    kind = node.Kind,
+                    id = node.Id,
+                    parentId = node.ParentId,
+                    className = node.ClassName,
+                    transitions = node.Transitions.Select(transition => new
                     {
-                        id = keyframe.Id,
-                        property = keyframe.Property,
-                        offset = keyframe.Offset,
-                        value = keyframe.Value,
-                        easing = keyframe.Easing
+                        property = transition.Property,
+                        durationMs = transition.DurationMs,
+                        easing = transition.Easing
+                    }),
+                    animations = node.Animations.Select(animation => new
+                    {
+                        id = animation.Id,
+                        name = animation.Name,
+                        durationMs = animation.DurationMs,
+                        active = animation.Active,
+                        loop = animation.Loop,
+                        easing = animation.Easing,
+                        keyframes = animation.Keyframes.Select(keyframe => new
+                        {
+                            id = keyframe.Id,
+                            property = keyframe.Property,
+                            offset = keyframe.Offset,
+                            value = keyframe.Value,
+                            easing = keyframe.Easing
+                        })
+                    }),
+                    position = ToJsVector(node.Position),
+                    rotation = ToJsVector(node.Rotation),
+                    scale = ToJsVector(node.Scale),
+                    geometry = meshNode?.Geometry,
+                    material = meshNode?.Material,
+                    outline = meshNode?.Outline,
+                    sourceUrl = modelNode?.SourceUrl,
+                    animationClipName = modelNode?.AnimationClipName,
+                    isAnimationPlaying = modelNode?.IsAnimationPlaying,
+                    animationLoop = modelNode?.AnimationLoop,
+                    animationSpeed = modelNode?.AnimationSpeed,
+                    animationTimeMs = modelNode?.AnimationTimeMs,
+                    animationBlendMs = modelNode?.AnimationBlendMs,
+                    bonePoses = modelNode?.BonePoses.Select(pose => new
+                    {
+                        boneName = pose.BoneName,
+                        position = ToJsVector(pose.Position),
+                        rotation = ToJsVector(pose.Rotation),
+                        scale = ToJsVector(pose.Scale)
                     })
-                }),
-                position = ToJsVector(group.Position),
-                rotation = ToJsVector(group.Rotation),
-                scale = ToJsVector(group.Scale)
+                };
             }),
-            removeGroupIds = delta.RemoveGroupIds,
-            upsertMeshes = delta.UpsertMeshes.Select(mesh => new
+            removeNodes = delta.RemoveNodes.Select(node => new
             {
-                id = mesh.Id,
-                parentId = mesh.ParentId,
-                geometry = mesh.Geometry,
-                material = mesh.Material,
-                outline = mesh.Outline,
-                className = mesh.ClassName,
-                transitions = mesh.Transitions.Select(transition => new
-                {
-                    property = transition.Property,
-                    durationMs = transition.DurationMs,
-                    easing = transition.Easing
-                }),
-                animations = mesh.Animations.Select(animation => new
-                {
-                    id = animation.Id,
-                    name = animation.Name,
-                    durationMs = animation.DurationMs,
-                    active = animation.Active,
-                    loop = animation.Loop,
-                    easing = animation.Easing,
-                    keyframes = animation.Keyframes.Select(keyframe => new
-                    {
-                        id = keyframe.Id,
-                        property = keyframe.Property,
-                        offset = keyframe.Offset,
-                        value = keyframe.Value,
-                        easing = keyframe.Easing
-                    })
-                }),
-                position = ToJsVector(mesh.Position),
-                rotation = ToJsVector(mesh.Rotation),
-                scale = ToJsVector(mesh.Scale)
-            }),
-            removeMeshIds = delta.RemoveMeshIds,
-            upsertModels = delta.UpsertModels.Select(model => new
-            {
-                id = model.Id,
-                parentId = model.ParentId,
-                sourceUrl = model.SourceUrl,
-                className = model.ClassName,
-                transitions = model.Transitions.Select(transition => new
-                {
-                    property = transition.Property,
-                    durationMs = transition.DurationMs,
-                    easing = transition.Easing
-                }),
-                animations = model.Animations.Select(animation => new
-                {
-                    id = animation.Id,
-                    name = animation.Name,
-                    durationMs = animation.DurationMs,
-                    active = animation.Active,
-                    loop = animation.Loop,
-                    easing = animation.Easing,
-                    keyframes = animation.Keyframes.Select(keyframe => new
-                    {
-                        id = keyframe.Id,
-                        property = keyframe.Property,
-                        offset = keyframe.Offset,
-                        value = keyframe.Value,
-                        easing = keyframe.Easing
-                    })
-                }),
-                position = ToJsVector(model.Position),
-                rotation = ToJsVector(model.Rotation),
-                scale = ToJsVector(model.Scale),
-                animationClipName = model.AnimationClipName,
-                isAnimationPlaying = model.IsAnimationPlaying,
-                animationLoop = model.AnimationLoop,
-                animationSpeed = model.AnimationSpeed,
-                animationTimeMs = model.AnimationTimeMs,
-                animationBlendMs = model.AnimationBlendMs,
-                bonePoses = model.BonePoses.Select(pose => new
-                {
-                    boneName = pose.BoneName,
-                    position = ToJsVector(pose.Position),
-                    rotation = ToJsVector(pose.Rotation),
-                    scale = ToJsVector(pose.Scale)
-                })
-            }),
-            removeModelIds = delta.RemoveModelIds
+                kind = node.Kind,
+                id = node.Id
+            })
         })!;
     }
 

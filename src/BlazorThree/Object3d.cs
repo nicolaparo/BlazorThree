@@ -7,7 +7,7 @@ namespace BlazorThree;
 /// <summary>
 /// Base component for scene nodes that expose transforms, stable identifiers, and element interaction callbacks.
 /// </summary>
-public abstract class Object3d : ComponentBase, IPositionable, IRotatable, IScalable
+public abstract class Object3d : BlazorThreeBaseComponent, IPositionable, IRotatable, IScalable
 {
     private readonly string generatedId = Guid.NewGuid().ToString("N");
 

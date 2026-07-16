@@ -5,8 +5,13 @@ namespace BlazorThree.Engine;
 /// Represents mesh state.
 /// </summary>
 
-internal sealed class MeshState : IPositionable, IRotatable, IScalable
+internal sealed class MeshState : ISceneNodeState
 {
+    /// <summary>
+    /// Gets the scene node kind.
+    /// </summary>
+    public string Kind => SceneNodeKinds.Mesh;
+
     /// <summary>
     /// Gets or sets the id.
     /// </summary>

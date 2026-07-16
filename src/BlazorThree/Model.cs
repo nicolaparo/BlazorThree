@@ -11,13 +11,7 @@ public class Model : Object3d, IDisposable
 {
     private readonly ModelContext modelContext = new();
 
-    private readonly TransitionHostContext transitionHostContext = new();
-
     private readonly Dictionary<string, BonePoseState> childBonePoses = new(StringComparer.Ordinal);
-
-    private readonly Dictionary<string, TransitionState> transitions = new(StringComparer.Ordinal);
-
-    private readonly Dictionary<string, AnimationState> animations = new(StringComparer.Ordinal);
 
     private string availableClipsSignature = string.Empty;
 
@@ -101,7 +95,7 @@ public class Model : Object3d, IDisposable
             childBuilder.OpenComponent<CascadingValue<TransitionScopeContext>>(0);
             childBuilder.AddAttribute(1, nameof(CascadingValue<TransitionScopeContext>.Value), new TransitionScopeContext
             {
-                Host = transitionHostContext,
+                Host = TransitionHostContext,
                 AllowedPropertyRoots = AnimatablePropertyRegistry.GetAnimatablePropertyRoots(typeof(Model))
             });
             childBuilder.AddAttribute(2, nameof(CascadingValue<TransitionScopeContext>.ChildContent), ChildContent);
@@ -139,53 +133,7 @@ public class Model : Object3d, IDisposable
             }
         };
 
-        transitionHostContext.UpsertTransition = transition =>
-        {
-            if (isDisposed)
-            {
-                return;
-            }
-
-            transitions[transition.Property] = transition;
-            Publish();
-        };
-
-        transitionHostContext.RemoveTransition = property =>
-        {
-            if (isDisposed)
-            {
-                return;
-            }
-
-            if (transitions.Remove(property))
-            {
-                Publish();
-            }
-        };
-
-        transitionHostContext.UpsertAnimation = animation =>
-        {
-            if (isDisposed)
-            {
-                return;
-            }
-
-            animations[animation.Id] = animation;
-            Publish();
-        };
-
-        transitionHostContext.RemoveAnimation = animationId =>
-        {
-            if (isDisposed)
-            {
-                return;
-            }
-
-            if (animations.Remove(animationId))
-            {
-                Publish();
-            }
-        };
+        InitializeTransitionHost(Publish);
 
         if (SceneContext is not null)
         {
@@ -221,24 +169,25 @@ public class Model : Object3d, IDisposable
             return;
         }
 
-        RemovePreviousIfIdChanged(previousId => SceneContext?.RemoveModel(previousId));
+        RemovePreviousIfIdChanged(previousId => SceneContext?.RemoveNode(SceneNodeKinds.Model, previousId));
 
         var modelId = CurrentId;
 
-        SceneContext?.SetModelMouseHandlers(
+        SceneContext?.SetNodeMouseHandlers(
+            SceneNodeKinds.Model,
             modelId,
             ClickHandler,
             MouseEnterHandler,
             MouseLeaveHandler);
 
-        SceneContext?.UpsertModel(new ModelState
+        SceneContext?.UpsertNode(new ModelState
         {
             Id = modelId,
             ParentId = NodeContainer?.ParentId,
             SourceUrl = SourceUrl,
             ClassName = ClassName,
-            Transitions = transitions.Values.OrderBy(transition => transition.Property, StringComparer.Ordinal).ToArray(),
-            Animations = animations.Values.OrderBy(animation => animation.Id, StringComparer.Ordinal).ToArray(),
+            Transitions = GetOrderedTransitions(),
+            Animations = GetOrderedAnimations(),
             Position = Position,
             Rotation = Rotation,
             Scale = Scale,
@@ -310,16 +259,16 @@ public class Model : Object3d, IDisposable
         isDisposed = true;
         modelContext.UpsertBonePose = null;
         modelContext.RemoveBonePose = null;
-        transitionHostContext.UpsertTransition = null;
-        transitionHostContext.RemoveTransition = null;
-        transitionHostContext.UpsertAnimation = null;
-        transitionHostContext.RemoveAnimation = null;
+        ClearTransitionHost();
 
         if (SceneContext is not null)
         {
             SceneContext.ModelClipsChanged -= HandleModelClipsChanged;
         }
 
-        SceneContext?.RemoveModel(GetDisposeId());
+        SceneContext?.RemoveNode(SceneNodeKinds.Model, GetDisposeId());
     }
+
+    /// <inheritdoc />
+    protected override bool IsDisposed => isDisposed;
 }

@@ -11,6 +11,27 @@ import {
     updateRecordAnimation
 } from "./blazorthree/animations.js";
 
+const nodeSyncDescriptors = Object.freeze({
+    group: {
+        kind: "group",
+        sync: syncGroups,
+        map: state => state.groups,
+        dispose: disposeGroupRecord
+    },
+    mesh: {
+        kind: "mesh",
+        sync: syncMeshes,
+        map: state => state.meshes,
+        dispose: disposeMeshRecord
+    },
+    model: {
+        kind: "model",
+        sync: syncModels,
+        map: state => state.models,
+        dispose: disposeModelRecord
+    }
+});
+
 const scenes = new Map();
 
 function normalizeBackgroundTextureSizing(raw) {
@@ -370,6 +391,75 @@ function syncLights(state, lightStates) {
     return liveLightIds;
 }
 
+function readNodeKind(nodeState) {
+    const raw = value(nodeState, "kind", "Kind", null);
+    return typeof raw === "string" ? raw.trim().toLowerCase() : "";
+}
+
+function bucketNodeUpserts(nodeStates) {
+    const buckets = {
+        group: [],
+        mesh: [],
+        model: []
+    };
+
+    for (const nodeState of nodeStates) {
+        const kind = readNodeKind(nodeState);
+        const descriptor = nodeSyncDescriptors[kind];
+        if (!descriptor) {
+            continue;
+        }
+
+        buckets[descriptor.kind].push(nodeState);
+    }
+
+    return buckets;
+}
+
+function syncNodeCollections(state, upsertNodeStates, isFull) {
+    const buckets = bucketNodeUpserts(upsertNodeStates);
+
+    for (const descriptor of Object.values(nodeSyncDescriptors)) {
+        const map = descriptor.map(state);
+        const bucket = buckets[descriptor.kind];
+
+        const shouldSync = isFull || bucket.length > 0;
+        if (!shouldSync) {
+            continue;
+        }
+
+        const liveIds = descriptor.sync(state, bucket);
+        if (!isFull) {
+            continue;
+        }
+
+        for (const [id, record] of map.entries()) {
+            if (liveIds.has(id)) {
+                continue;
+            }
+
+            descriptor.dispose(record);
+            map.delete(id);
+        }
+    }
+}
+
+function removeNodeByKind(state, kind, id) {
+    const descriptor = nodeSyncDescriptors[kind];
+    if (!descriptor) {
+        return;
+    }
+
+    const map = descriptor.map(state);
+    const record = map.get(id);
+    if (!record) {
+        return;
+    }
+
+    descriptor.dispose(record);
+    map.delete(id);
+}
+
 export function initScene(hostElement, options, dotNetRef) {
     const sceneId = crypto.randomUUID();
     const clearColor = value(options, "clearColor", "ClearColor", "#0d1117");
@@ -580,79 +670,19 @@ export function syncScene(sceneId, graph) {
         state.orbitControls.enabled = false;
     }
 
-    const groupStates = value(graph, "upsertGroups", "UpsertGroups", []);
-    const meshStates = value(graph, "upsertMeshes", "UpsertMeshes", []);
-    const modelStates = value(graph, "upsertModels", "UpsertModels", []);
+    const upsertNodeStates = value(graph, "upsertNodes", "UpsertNodes", []);
+    syncNodeCollections(state, upsertNodeStates, isFull);
 
-    if (isFull) {
-        const liveGroupIds = syncGroups(state, groupStates);
-        const liveMeshIds = syncMeshes(state, meshStates);
-        const liveModelIds = syncModels(state, modelStates);
-
-        for (const [id, record] of state.meshes.entries()) {
-            if (!liveMeshIds.has(id)) {
-                disposeMeshRecord(record);
-                state.meshes.delete(id);
-            }
-        }
-
-        for (const [id, record] of state.groups.entries()) {
-            if (!liveGroupIds.has(id)) {
-                disposeGroupRecord(record);
-                state.groups.delete(id);
-            }
-        }
-
-        for (const [id, record] of state.models.entries()) {
-            if (!liveModelIds.has(id)) {
-                disposeModelRecord(record);
-                state.models.delete(id);
-            }
-        }
-    } else {
-        if (groupStates.length) {
-            syncGroups(state, groupStates);
-        }
-
-        const removeGroupIds = value(graph, "removeGroupIds", "RemoveGroupIds", []);
-        for (const id of removeGroupIds) {
-            const record = state.groups.get(id);
-            if (!record) {
+    if (!isFull) {
+        const removeNodes = value(graph, "removeNodes", "RemoveNodes", []);
+        for (const nodeRef of removeNodes) {
+            const kind = readNodeKind(nodeRef);
+            const id = value(nodeRef, "id", "Id", null);
+            if (!id) {
                 continue;
             }
 
-            disposeGroupRecord(record);
-            state.groups.delete(id);
-        }
-
-        if (meshStates.length) {
-            syncMeshes(state, meshStates);
-        }
-
-        const removeMeshIds = value(graph, "removeMeshIds", "RemoveMeshIds", []);
-        for (const id of removeMeshIds) {
-            const record = state.meshes.get(id);
-            if (!record) {
-                continue;
-            }
-
-            disposeMeshRecord(record);
-            state.meshes.delete(id);
-        }
-
-        if (modelStates.length) {
-            syncModels(state, modelStates);
-        }
-
-        const removeModelIds = value(graph, "removeModelIds", "RemoveModelIds", []);
-        for (const id of removeModelIds) {
-            const record = state.models.get(id);
-            if (!record) {
-                continue;
-            }
-
-            disposeModelRecord(record);
-            state.models.delete(id);
+            removeNodeByKind(state, kind, id);
         }
     }
 

@@ -3,7 +3,7 @@ namespace BlazorThree.Engine;
 /// Represents transition host context.
 /// </summary>
 
-internal sealed class TransitionHostContext
+public sealed class TransitionHostContext
 {
     /// <summary>
     /// Gets or sets the upsert transition.

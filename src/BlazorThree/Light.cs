@@ -8,15 +8,9 @@ namespace BlazorThree;
 /// <summary>
 /// Publishes a single scene light using one of the built-in <see cref="Engine.LightDefinitions" /> presets.
 /// </summary>
-public class Light : ComponentBase, IPositionable, IDisposable
+public class Light : BlazorThreeBaseComponent, IPositionable, IDisposable
 {
     private readonly string generatedId = Guid.NewGuid().ToString("N");
-
-    private readonly TransitionHostContext transitionHostContext = new();
-
-    private readonly Dictionary<string, TransitionState> transitions = new(StringComparer.Ordinal);
-
-    private readonly Dictionary<string, AnimationState> animations = new(StringComparer.Ordinal);
 
     private string? lastPublishedId;
 
@@ -75,7 +69,7 @@ public class Light : ComponentBase, IPositionable, IDisposable
         builder.OpenComponent<CascadingValue<TransitionScopeContext>>(0);
         builder.AddAttribute(1, nameof(CascadingValue<TransitionScopeContext>.Value), new TransitionScopeContext
         {
-            Host = transitionHostContext,
+            Host = TransitionHostContext,
             AllowedPropertyRoots = AnimatablePropertyRegistry.GetAnimatablePropertyRoots(typeof(Light))
         });
         builder.AddAttribute(2, nameof(CascadingValue<TransitionScopeContext>.ChildContent), ChildContent);
@@ -87,33 +81,7 @@ public class Light : ComponentBase, IPositionable, IDisposable
     /// </summary>
     protected override void OnInitialized()
     {
-        transitionHostContext.UpsertTransition = transition =>
-        {
-            transitions[transition.Property] = transition;
-            Publish();
-        };
-
-        transitionHostContext.RemoveTransition = property =>
-        {
-            if (transitions.Remove(property))
-            {
-                Publish();
-            }
-        };
-
-        transitionHostContext.UpsertAnimation = animation =>
-        {
-            animations[animation.Id] = animation;
-            Publish();
-        };
-
-        transitionHostContext.RemoveAnimation = animationId =>
-        {
-            if (animations.Remove(animationId))
-            {
-                Publish();
-            }
-        };
+        InitializeTransitionHost(Publish);
     }
 
     /// <summary>
@@ -145,8 +113,8 @@ public class Light : ComponentBase, IPositionable, IDisposable
             Color = Color,
             Intensity = Intensity,
             Position = Position,
-            Transitions = transitions.Values.OrderBy(transition => transition.Property, StringComparer.Ordinal).ToArray(),
-            Animations = animations.Values.OrderBy(animation => animation.Id, StringComparer.Ordinal).ToArray()
+            Transitions = GetOrderedTransitions(),
+            Animations = GetOrderedAnimations()
         });
 
         lastPublishedId = lightId;
@@ -158,13 +126,13 @@ public class Light : ComponentBase, IPositionable, IDisposable
     public void Dispose()
     {
         isDisposed = true;
-        transitionHostContext.UpsertTransition = null;
-        transitionHostContext.RemoveTransition = null;
-        transitionHostContext.UpsertAnimation = null;
-        transitionHostContext.RemoveAnimation = null;
+        ClearTransitionHost();
 
         SceneContext?.RemoveLight(lastPublishedId ?? CurrentId);
     }
+
+    /// <inheritdoc />
+    protected override bool IsDisposed => isDisposed;
 
     private string CurrentId => string.IsNullOrWhiteSpace(Id) ? generatedId : Id;
 }

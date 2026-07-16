@@ -5,8 +5,13 @@ namespace BlazorThree.Engine;
 /// Represents model state.
 /// </summary>
 
-internal sealed class ModelState : IPositionable, IRotatable, IScalable
+internal sealed class ModelState : ISceneNodeState
 {
+    /// <summary>
+    /// Gets the scene node kind.
+    /// </summary>
+    public string Kind => SceneNodeKinds.Model;
+
     /// <summary>
     /// Gets or sets the id.
     /// </summary>

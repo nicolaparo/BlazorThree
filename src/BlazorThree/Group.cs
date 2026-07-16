@@ -11,12 +11,6 @@ public class Group : Object3d, IDisposable
 {
     private readonly NodeContainerContext childContainer = new();
 
-    private readonly TransitionHostContext transitionHostContext = new();
-
-    private readonly Dictionary<string, TransitionState> transitions = new(StringComparer.Ordinal);
-
-    private readonly Dictionary<string, AnimationState> animations = new(StringComparer.Ordinal);
-
     private bool isDisposed;
 
     /// <summary>
@@ -43,7 +37,7 @@ public class Group : Object3d, IDisposable
             childBuilder.OpenComponent<CascadingValue<TransitionScopeContext>>(0);
             childBuilder.AddAttribute(1, nameof(CascadingValue<TransitionScopeContext>.Value), new TransitionScopeContext
             {
-                Host = transitionHostContext,
+                Host = TransitionHostContext,
                 AllowedPropertyRoots = AnimatablePropertyRegistry.GetAnimatablePropertyRoots(typeof(Group))
             });
             childBuilder.AddAttribute(2, nameof(CascadingValue<TransitionScopeContext>.ChildContent), ChildContent);
@@ -57,53 +51,7 @@ public class Group : Object3d, IDisposable
     /// </summary>
     protected override void OnInitialized()
     {
-        transitionHostContext.UpsertTransition = transition =>
-        {
-            if (isDisposed)
-            {
-                return;
-            }
-
-            transitions[transition.Property] = transition;
-            Publish();
-        };
-
-        transitionHostContext.RemoveTransition = property =>
-        {
-            if (isDisposed)
-            {
-                return;
-            }
-
-            if (transitions.Remove(property))
-            {
-                Publish();
-            }
-        };
-
-        transitionHostContext.UpsertAnimation = animation =>
-        {
-            if (isDisposed)
-            {
-                return;
-            }
-
-            animations[animation.Id] = animation;
-            Publish();
-        };
-
-        transitionHostContext.RemoveAnimation = animationId =>
-        {
-            if (isDisposed)
-            {
-                return;
-            }
-
-            if (animations.Remove(animationId))
-            {
-                Publish();
-            }
-        };
+        InitializeTransitionHost(Publish);
     }
 
     /// <summary>
@@ -121,24 +69,25 @@ public class Group : Object3d, IDisposable
             return;
         }
 
-        RemovePreviousIfIdChanged(previousId => SceneContext?.RemoveGroup(previousId));
+        RemovePreviousIfIdChanged(previousId => SceneContext?.RemoveNode(SceneNodeKinds.Group, previousId));
 
         var groupId = CurrentId;
         childContainer.ParentId = groupId;
 
-        SceneContext?.SetGroupMouseHandlers(
+        SceneContext?.SetNodeMouseHandlers(
+            SceneNodeKinds.Group,
             groupId,
             ClickHandler,
             MouseEnterHandler,
             MouseLeaveHandler);
 
-        SceneContext?.UpsertGroup(new GroupState
+        SceneContext?.UpsertNode(new GroupState
         {
             Id = groupId,
             ParentId = NodeContainer?.ParentId,
             ClassName = ClassName,
-            Transitions = transitions.Values.OrderBy(transition => transition.Property, StringComparer.Ordinal).ToArray(),
-            Animations = animations.Values.OrderBy(animation => animation.Id, StringComparer.Ordinal).ToArray(),
+            Transitions = GetOrderedTransitions(),
+            Animations = GetOrderedAnimations(),
             Position = Position,
             Rotation = Rotation,
             Scale = Scale
@@ -153,11 +102,11 @@ public class Group : Object3d, IDisposable
     public void Dispose()
     {
         isDisposed = true;
-        transitionHostContext.UpsertTransition = null;
-        transitionHostContext.RemoveTransition = null;
-        transitionHostContext.UpsertAnimation = null;
-        transitionHostContext.RemoveAnimation = null;
+        ClearTransitionHost();
 
-        SceneContext?.RemoveGroup(GetDisposeId());
+        SceneContext?.RemoveNode(SceneNodeKinds.Group, GetDisposeId());
     }
+
+    /// <inheritdoc />
+    protected override bool IsDisposed => isDisposed;
 }

@@ -5,8 +5,13 @@ namespace BlazorThree.Engine;
 /// Represents group state.
 /// </summary>
 
-internal sealed class GroupState : IPositionable, IRotatable, IScalable
+internal sealed class GroupState : ISceneNodeState
 {
+    /// <summary>
+    /// Gets the scene node kind.
+    /// </summary>
+    public string Kind => SceneNodeKinds.Group;
+
     /// <summary>
     /// Gets or sets the id.
     /// </summary>

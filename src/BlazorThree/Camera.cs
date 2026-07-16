@@ -8,15 +8,9 @@ namespace BlazorThree;
 /// <summary>
 /// Configures the active perspective camera used to render the surrounding <see cref="Scene" />.
 /// </summary>
-public class Camera : ComponentBase, IPositionable, IRotatable, IDisposable
+public class Camera : BlazorThreeBaseComponent, IPositionable, IRotatable, IDisposable
 {
-    private readonly TransitionHostContext transitionHostContext = new();
-
     private readonly CameraContext cameraContext = new();
-
-    private readonly Dictionary<string, TransitionState> transitions = new(StringComparer.Ordinal);
-
-    private readonly Dictionary<string, AnimationState> animations = new(StringComparer.Ordinal);
 
     private OrbitControlsState orbitControls = new();
 
@@ -76,7 +70,7 @@ public class Camera : ComponentBase, IPositionable, IRotatable, IDisposable
         builder.OpenComponent<CascadingValue<TransitionScopeContext>>(0);
         builder.AddAttribute(1, nameof(CascadingValue<TransitionScopeContext>.Value), new TransitionScopeContext
         {
-            Host = transitionHostContext,
+            Host = TransitionHostContext,
             AllowedPropertyRoots = AnimatablePropertyRegistry.GetAnimatablePropertyRoots(typeof(Camera))
         });
         builder.AddAttribute(2, nameof(CascadingValue<TransitionScopeContext>.ChildContent), (RenderFragment)(contentBuilder =>
@@ -106,33 +100,7 @@ public class Camera : ComponentBase, IPositionable, IRotatable, IDisposable
             SceneContext?.SetOrbitControls(orbitControls);
         };
 
-        transitionHostContext.UpsertTransition = transition =>
-        {
-            transitions[transition.Property] = transition;
-            Publish();
-        };
-
-        transitionHostContext.RemoveTransition = property =>
-        {
-            if (transitions.Remove(property))
-            {
-                Publish();
-            }
-        };
-
-        transitionHostContext.UpsertAnimation = animation =>
-        {
-            animations[animation.Id] = animation;
-            Publish();
-        };
-
-        transitionHostContext.RemoveAnimation = animationId =>
-        {
-            if (animations.Remove(animationId))
-            {
-                Publish();
-            }
-        };
+        InitializeTransitionHost(Publish);
     }
 
     /// <summary>
@@ -152,8 +120,8 @@ public class Camera : ComponentBase, IPositionable, IRotatable, IDisposable
             Rotation = Rotation,
             Up = Up,
             LookAt = LookAt,
-            Transitions = transitions.Values.OrderBy(transition => transition.Property, StringComparer.Ordinal).ToArray(),
-            Animations = animations.Values.OrderBy(animation => animation.Id, StringComparer.Ordinal).ToArray()
+            Transitions = GetOrderedTransitions(),
+            Animations = GetOrderedAnimations()
         });
     }
 

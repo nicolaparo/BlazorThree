@@ -13,12 +13,6 @@ public class Mesh : Object3d, IDisposable
 {
     private readonly MeshContext meshContext = new();
 
-    private readonly TransitionHostContext transitionHostContext = new();
-
-    private readonly Dictionary<string, TransitionState> transitions = new(StringComparer.Ordinal);
-
-    private readonly Dictionary<string, AnimationState> animations = new(StringComparer.Ordinal);
-
     private GeometryDefinition geometry = new BoxGeometryDefinition();
 
     private MaterialDefinition material = new MeshStandardMaterialDefinition();
@@ -51,7 +45,7 @@ public class Mesh : Object3d, IDisposable
             childBuilder.OpenComponent<CascadingValue<TransitionScopeContext>>(0);
             childBuilder.AddAttribute(1, nameof(CascadingValue<TransitionScopeContext>.Value), new TransitionScopeContext
             {
-                Host = transitionHostContext,
+                Host = TransitionHostContext,
                 AllowedPropertyRoots = AnimatablePropertyRegistry.GetAnimatablePropertyRoots(typeof(Mesh))
             });
             childBuilder.AddAttribute(2, nameof(CascadingValue<TransitionScopeContext>.ChildContent), ChildContent);
@@ -98,53 +92,7 @@ public class Mesh : Object3d, IDisposable
             Publish();
         };
 
-        transitionHostContext.UpsertTransition = transition =>
-        {
-            if (isDisposed)
-            {
-                return;
-            }
-
-            transitions[transition.Property] = transition;
-            Publish();
-        };
-
-        transitionHostContext.RemoveTransition = property =>
-        {
-            if (isDisposed)
-            {
-                return;
-            }
-
-            if (transitions.Remove(property))
-            {
-                Publish();
-            }
-        };
-
-        transitionHostContext.UpsertAnimation = animation =>
-        {
-            if (isDisposed)
-            {
-                return;
-            }
-
-            animations[animation.Id] = animation;
-            Publish();
-        };
-
-        transitionHostContext.RemoveAnimation = animationId =>
-        {
-            if (isDisposed)
-            {
-                return;
-            }
-
-            if (animations.Remove(animationId))
-            {
-                Publish();
-            }
-        };
+        InitializeTransitionHost(Publish);
     }
 
     /// <summary>
@@ -162,17 +110,18 @@ public class Mesh : Object3d, IDisposable
             return;
         }
 
-        RemovePreviousIfIdChanged(previousId => SceneContext?.RemoveMesh(previousId));
+        RemovePreviousIfIdChanged(previousId => SceneContext?.RemoveNode(SceneNodeKinds.Mesh, previousId));
 
         var meshId = CurrentId;
 
-        SceneContext?.SetMeshMouseHandlers(
+        SceneContext?.SetNodeMouseHandlers(
+            SceneNodeKinds.Mesh,
             meshId,
             ClickHandler,
             MouseEnterHandler,
             MouseLeaveHandler);
 
-        SceneContext?.UpsertMesh(new MeshState
+        SceneContext?.UpsertNode(new MeshState
         {
             Id = meshId,
             ParentId = NodeContainer?.ParentId,
@@ -180,8 +129,8 @@ public class Mesh : Object3d, IDisposable
             Material = material,
             Outline = outline,
             ClassName = ClassName,
-            Transitions = transitions.Values.OrderBy(transition => transition.Property, StringComparer.Ordinal).ToArray(),
-            Animations = animations.Values.OrderBy(animation => animation.Id, StringComparer.Ordinal).ToArray(),
+            Transitions = GetOrderedTransitions(),
+            Animations = GetOrderedAnimations(),
             Position = Position,
             Rotation = Rotation,
             Scale = Scale
@@ -199,12 +148,12 @@ public class Mesh : Object3d, IDisposable
         meshContext.SetGeometry = null;
         meshContext.SetMaterial = null;
         meshContext.SetOutline = null;
-        transitionHostContext.UpsertTransition = null;
-        transitionHostContext.RemoveTransition = null;
-        transitionHostContext.UpsertAnimation = null;
-        transitionHostContext.RemoveAnimation = null;
+        ClearTransitionHost();
 
         var meshId = GetDisposeId();
-        SceneContext?.RemoveMesh(meshId);
+        SceneContext?.RemoveNode(SceneNodeKinds.Mesh, meshId);
     }
+
+    /// <inheritdoc />
+    protected override bool IsDisposed => isDisposed;
 }

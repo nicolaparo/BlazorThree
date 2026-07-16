@@ -5,17 +5,9 @@ namespace BlazorThree.Engine;
 
 internal sealed class SceneContext
 {
-    private const string MeshElementType = "mesh";
-
-    private const string ModelElementType = "model";
-
-    private const string GroupElementType = "group";
+    private readonly Dictionary<string, ISceneNodeState> nodes = new(StringComparer.Ordinal);
 
     private readonly Dictionary<string, GroupState> groups = new(StringComparer.Ordinal);
-
-    private readonly Dictionary<string, MeshState> meshes = new(StringComparer.Ordinal);
-
-    private readonly Dictionary<string, ModelState> models = new(StringComparer.Ordinal);
 
     private readonly Dictionary<string, ModelClipInfo> modelClipInfos = new(StringComparer.Ordinal);
 
@@ -47,17 +39,9 @@ internal sealed class SceneContext
 
     private bool interactionDirty = true;
 
-    private readonly HashSet<string> upsertedGroupIds = new(StringComparer.Ordinal);
+    private readonly HashSet<string> upsertedNodeKeys = new(StringComparer.Ordinal);
 
-    private readonly HashSet<string> removedGroupIds = new(StringComparer.Ordinal);
-
-    private readonly HashSet<string> upsertedMeshIds = new(StringComparer.Ordinal);
-
-    private readonly HashSet<string> removedMeshIds = new(StringComparer.Ordinal);
-
-    private readonly HashSet<string> upsertedModelIds = new(StringComparer.Ordinal);
-
-    private readonly HashSet<string> removedModelIds = new(StringComparer.Ordinal);
+    private readonly HashSet<string> removedNodeKeys = new(StringComparer.Ordinal);
 
     private readonly HashSet<string> upsertedLightIds = new(StringComparer.Ordinal);
 
@@ -113,114 +97,65 @@ internal sealed class SceneContext
         Changed?.Invoke();
     }
 
-    public void UpsertMesh(MeshState state)
+    public void UpsertNode<TState>(TState state)
+        where TState : class, ISceneNodeState
     {
-        meshes[state.Id] = state;
-        upsertedMeshIds.Add(state.Id);
-        removedMeshIds.Remove(state.Id);
+        var key = BuildNodeKey(state.Kind, state.Id);
+
+        nodes[key] = state;
+        upsertedNodeKeys.Add(key);
+        removedNodeKeys.Remove(key);
+
+        if (string.Equals(state.Kind, SceneNodeKinds.Group, StringComparison.Ordinal)
+            && state is GroupState groupState)
+        {
+            groups[groupState.Id] = groupState;
+        }
+
         interactionDirty = true;
         Changed?.Invoke();
     }
 
-    public void UpsertModel(ModelState state)
+    public void RemoveNode(string kind, string id)
     {
-        models[state.Id] = state;
-        upsertedModelIds.Add(state.Id);
-        removedModelIds.Remove(state.Id);
+        RemoveHandlers(kind, id);
+
+        var key = BuildNodeKey(kind, id);
+        if (!nodes.Remove(key))
+        {
+            return;
+        }
+
+        upsertedNodeKeys.Remove(key);
+        removedNodeKeys.Add(key);
+
+        if (string.Equals(kind, SceneNodeKinds.Group, StringComparison.Ordinal))
+        {
+            groups.Remove(id);
+        }
+
+        if (string.Equals(kind, SceneNodeKinds.Model, StringComparison.Ordinal))
+        {
+            modelClipInfos.Remove(id);
+        }
+
         interactionDirty = true;
         Changed?.Invoke();
     }
 
-    public void UpsertGroup(GroupState state)
-    {
-        groups[state.Id] = state;
-        upsertedGroupIds.Add(state.Id);
-        removedGroupIds.Remove(state.Id);
-        interactionDirty = true;
-        Changed?.Invoke();
-    }
-
-    public void RemoveGroup(string id)
-    {
-        RemoveHandlers(GroupElementType, id);
-
-        if (groups.Remove(id))
-        {
-            upsertedGroupIds.Remove(id);
-            removedGroupIds.Add(id);
-            interactionDirty = true;
-            Changed?.Invoke();
-        }
-    }
-
-    public void RemoveMesh(string id)
-    {
-        RemoveHandlers(MeshElementType, id);
-
-        if (meshes.Remove(id))
-        {
-            upsertedMeshIds.Remove(id);
-            removedMeshIds.Add(id);
-            interactionDirty = true;
-            Changed?.Invoke();
-        }
-    }
-
-    public void RemoveModel(string id)
-    {
-        RemoveHandlers(ModelElementType, id);
-
-        if (models.Remove(id))
-        {
-            upsertedModelIds.Remove(id);
-            removedModelIds.Add(id);
-            interactionDirty = true;
-            Changed?.Invoke();
-        }
-
-        modelClipInfos.Remove(id);
-    }
-
-    public void SetMeshMouseHandlers(
+    public void SetNodeMouseHandlers(
+        string kind,
         string id,
         Func<SceneElementMouseEventArgs, Task>? click,
         Func<SceneElementMouseEventArgs, Task>? mouseEnter,
         Func<SceneElementMouseEventArgs, Task>? mouseLeave)
     {
-        SetHandlers(MeshElementType, id, click, mouseEnter, mouseLeave);
+        SetHandlers(kind, id, click, mouseEnter, mouseLeave);
     }
 
-    public void ClearMeshMouseHandlers(string id)
+    public void ClearNodeMouseHandlers(string kind, string id)
     {
-        RemoveHandlers(MeshElementType, id);
-    }
-
-    public void SetModelMouseHandlers(
-        string id,
-        Func<SceneElementMouseEventArgs, Task>? click,
-        Func<SceneElementMouseEventArgs, Task>? mouseEnter,
-        Func<SceneElementMouseEventArgs, Task>? mouseLeave)
-    {
-        SetHandlers(ModelElementType, id, click, mouseEnter, mouseLeave);
-    }
-
-    public void ClearModelMouseHandlers(string id)
-    {
-        RemoveHandlers(ModelElementType, id);
-    }
-
-    public void SetGroupMouseHandlers(
-        string id,
-        Func<SceneElementMouseEventArgs, Task>? click,
-        Func<SceneElementMouseEventArgs, Task>? mouseEnter,
-        Func<SceneElementMouseEventArgs, Task>? mouseLeave)
-    {
-        SetHandlers(GroupElementType, id, click, mouseEnter, mouseLeave);
-    }
-
-    public void ClearGroupMouseHandlers(string id)
-    {
-        RemoveHandlers(GroupElementType, id);
+        RemoveHandlers(kind, id);
     }
 
     public Task DispatchElementClickAsync(string elementId, string elementType)
@@ -330,18 +265,12 @@ internal sealed class SceneContext
                 DispatchableElementClickKeys = GetDispatchableElementClickKeys(),
                 DispatchableElementMouseEnterKeys = GetDispatchableElementMouseEnterKeys(),
                 DispatchableElementMouseLeaveKeys = GetDispatchableElementMouseLeaveKeys(),
-                UpsertGroups = groups.Values.ToArray(),
-                UpsertMeshes = meshes.Values.ToArray(),
-                UpsertModels = models.Values.ToArray()
+                UpsertNodes = nodes.Values.ToArray()
             };
 
             ResetDirtyTracking();
             return full;
         }
-
-        var upsertGroups = ToUpsertStates(groups, upsertedGroupIds);
-        var upsertMeshes = ToUpsertStates(meshes, upsertedMeshIds);
-        var upsertModels = ToUpsertStates(models, upsertedModelIds);
 
         var delta = new SceneDeltaState
         {
@@ -359,12 +288,8 @@ internal sealed class SceneContext
             DispatchableElementClickKeys = interactionDirty ? GetDispatchableElementClickKeys() : Array.Empty<string>(),
             DispatchableElementMouseEnterKeys = interactionDirty ? GetDispatchableElementMouseEnterKeys() : Array.Empty<string>(),
             DispatchableElementMouseLeaveKeys = interactionDirty ? GetDispatchableElementMouseLeaveKeys() : Array.Empty<string>(),
-            UpsertGroups = upsertGroups,
-            RemoveGroupIds = removedGroupIds.ToArray(),
-            UpsertMeshes = upsertMeshes,
-            RemoveMeshIds = removedMeshIds.ToArray(),
-            UpsertModels = upsertModels,
-            RemoveModelIds = removedModelIds.ToArray()
+            UpsertNodes = ToUpsertNodes(),
+            RemoveNodes = ToRemovedNodes()
         };
 
         ResetDirtyTracking();
@@ -378,9 +303,48 @@ internal sealed class SceneContext
             Camera = camera,
             Lights = lights.Values.ToArray(),
             OrbitControls = orbitControls,
-            Groups = groups.Values.ToArray(),
-            Meshes = meshes.Values.ToArray(),
-            Models = models.Values.ToArray()
+            Groups = nodes.Values.OfType<GroupState>().ToArray(),
+            Meshes = nodes.Values.OfType<MeshState>().ToArray(),
+            Models = nodes.Values.OfType<ModelState>().ToArray()
+        };
+    }
+
+    private IReadOnlyList<ISceneNodeState> ToUpsertNodes()
+    {
+        var result = new List<ISceneNodeState>();
+
+        foreach (var key in upsertedNodeKeys)
+        {
+            if (nodes.TryGetValue(key, out var state))
+            {
+                result.Add(state);
+            }
+        }
+
+        return result;
+    }
+
+    private IReadOnlyList<SceneNodeKey> ToRemovedNodes()
+    {
+        return removedNodeKeys
+            .Select(ParseNodeKey)
+            .Where(static key => key is not null)
+            .Select(static key => key!)
+            .ToArray();
+    }
+
+    private static SceneNodeKey? ParseNodeKey(string key)
+    {
+        var separator = key.IndexOf(':', StringComparison.Ordinal);
+        if (separator <= 0 || separator >= key.Length - 1)
+        {
+            return null;
+        }
+
+        return new SceneNodeKey
+        {
+            Kind = key[..separator],
+            Id = key[(separator + 1)..]
         };
     }
 
@@ -409,12 +373,8 @@ internal sealed class SceneContext
         orbitControlsDirty = false;
         interactionDirty = false;
 
-        upsertedGroupIds.Clear();
-        removedGroupIds.Clear();
-        upsertedMeshIds.Clear();
-        removedMeshIds.Clear();
-        upsertedModelIds.Clear();
-        removedModelIds.Clear();
+        upsertedNodeKeys.Clear();
+        removedNodeKeys.Clear();
         upsertedLightIds.Clear();
         removedLightIds.Clear();
     }
@@ -428,21 +388,7 @@ internal sealed class SceneContext
 
         EnqueueHandler(tasks, handlers, elementType, elementId);
 
-        if (string.Equals(elementType, MeshElementType, StringComparison.Ordinal)
-            && meshes.TryGetValue(elementId, out var mesh))
-        {
-            EnqueueAncestorGroupHandlers(tasks, handlers, mesh.ParentId);
-        }
-        else if (string.Equals(elementType, ModelElementType, StringComparison.Ordinal)
-                 && models.TryGetValue(elementId, out var model))
-        {
-            EnqueueAncestorGroupHandlers(tasks, handlers, model.ParentId);
-        }
-        else if (string.Equals(elementType, GroupElementType, StringComparison.Ordinal)
-                 && groups.TryGetValue(elementId, out var group))
-        {
-            EnqueueAncestorGroupHandlers(tasks, handlers, group.ParentId);
-        }
+        EnqueueParentGroupHandlers(tasks, handlers, elementType, elementId);
 
         return tasks.Count switch
         {
@@ -450,6 +396,23 @@ internal sealed class SceneContext
             1 => tasks[0],
             _ => Task.WhenAll(tasks)
         };
+    }
+
+    private void EnqueueParentGroupHandlers(
+        ICollection<Task> tasks,
+        IReadOnlyDictionary<string, Func<SceneElementMouseEventArgs, Task>> handlers,
+        string elementType,
+        string elementId)
+    {
+        if (TryGetNode(elementType, elementId, out var state))
+        {
+            EnqueueAncestorGroupHandlers(tasks, handlers, state.ParentId);
+        }
+    }
+
+    private bool TryGetNode(string kind, string id, out ISceneNodeState state)
+    {
+        return nodes.TryGetValue(BuildNodeKey(kind, id), out state!);
     }
 
     private void EnqueueAncestorGroupHandlers(
@@ -461,7 +424,7 @@ internal sealed class SceneContext
 
         while (!string.IsNullOrEmpty(currentGroupId) && groups.TryGetValue(currentGroupId, out var group))
         {
-            EnqueueHandler(tasks, handlers, GroupElementType, group.Id);
+            EnqueueHandler(tasks, handlers, SceneNodeKinds.Group, group.Id);
             currentGroupId = group.ParentId;
         }
     }
@@ -526,6 +489,11 @@ internal sealed class SceneContext
         return $"{elementType}:{elementId}";
     }
 
+    private static string BuildNodeKey(string kind, string id)
+    {
+        return $"{kind}:{id}";
+    }
+
     private static void SetHandler<TEventArgs>(
         Dictionary<string, Func<TEventArgs, Task>> handlers,
         string key,
@@ -562,31 +530,30 @@ internal sealed class SceneContext
             return keys;
         }
 
-        foreach (var mesh in meshes.Values)
-        {
-            if (HasAnyAncestorGroupHandler(mesh.ParentId, handlers))
-            {
-                keys.Add(BuildHandlerKey(MeshElementType, mesh.Id));
-            }
-        }
-
-        foreach (var model in models.Values)
-        {
-            if (HasAnyAncestorGroupHandler(model.ParentId, handlers))
-            {
-                keys.Add(BuildHandlerKey(ModelElementType, model.Id));
-            }
-        }
-
-        foreach (var group in groups.Values)
-        {
-            if (HasAnyAncestorGroupHandler(group.ParentId, handlers))
-            {
-                keys.Add(BuildHandlerKey(GroupElementType, group.Id));
-            }
-        }
+        AddDispatchableElementKeys(keys, handlers, SceneNodeKinds.Mesh);
+        AddDispatchableElementKeys(keys, handlers, SceneNodeKinds.Model);
+        AddDispatchableElementKeys(keys, handlers, SceneNodeKinds.Group);
 
         return keys;
+    }
+
+    private void AddDispatchableElementKeys(
+        ISet<string> keys,
+        IReadOnlyDictionary<string, Func<SceneElementMouseEventArgs, Task>> handlers,
+        string kind)
+    {
+        foreach (var state in nodes.Values)
+        {
+            if (!string.Equals(state.Kind, kind, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            if (HasAnyAncestorGroupHandler(state.ParentId, handlers))
+            {
+                keys.Add(BuildHandlerKey(kind, state.Id));
+            }
+        }
     }
 
     private bool HasAnyAncestorGroupHandler(
@@ -597,7 +564,7 @@ internal sealed class SceneContext
 
         while (!string.IsNullOrEmpty(currentGroupId) && groups.TryGetValue(currentGroupId, out var group))
         {
-            if (handlers.ContainsKey(BuildHandlerKey(GroupElementType, group.Id)))
+            if (handlers.ContainsKey(BuildHandlerKey(SceneNodeKinds.Group, group.Id)))
             {
                 return true;
             }

@@ -475,135 +475,100 @@ function resolveTexture(state, textureUrl) {
     return texture;
 }
 
+function applyTexture(material, slot, texture) {
+    if (!texture) {
+        return;
+    }
+
+    material[slot] = texture;
+    material.needsUpdate = true;
+}
+
+const materialBuilders = Object.freeze({
+    meshBasic(state, materialState) {
+        const material = new THREE.MeshBasicMaterial({
+            color: value(materialState, "color", "Color", "#00a2ff"),
+            wireframe: value(materialState, "wireframe", "Wireframe", false)
+        });
+
+        applyTexture(material, "map", resolveTexture(state, value(materialState, "textureUrl", "TextureUrl", null)));
+        return material;
+    },
+    meshLambert(state, materialState) {
+        const material = new THREE.MeshLambertMaterial({
+            color: value(materialState, "color", "Color", "#00a2ff"),
+            emissive: value(materialState, "emissive", "Emissive", "#000000")
+        });
+
+        applyTexture(material, "map", resolveTexture(state, value(materialState, "textureUrl", "TextureUrl", null)));
+        return material;
+    },
+    meshMatcap(state, materialState) {
+        const material = new THREE.MeshMatcapMaterial({
+            color: value(materialState, "color", "Color", "#ffffff")
+        });
+
+        applyTexture(material, "matcap", resolveTexture(state, value(materialState, "matcapUrl", "MatcapUrl", null)));
+        return material;
+    },
+    meshNormal(state, materialState) {
+        return new THREE.MeshNormalMaterial({
+            wireframe: value(materialState, "wireframe", "Wireframe", false),
+            flatShading: value(materialState, "flatShading", "FlatShading", false)
+        });
+    },
+    meshPhong(state, materialState) {
+        const material = new THREE.MeshPhongMaterial({
+            color: value(materialState, "color", "Color", "#00a2ff"),
+            emissive: value(materialState, "emissive", "Emissive", "#000000"),
+            specular: value(materialState, "specular", "Specular", "#111111"),
+            shininess: value(materialState, "shininess", "Shininess", 30)
+        });
+
+        applyTexture(material, "map", resolveTexture(state, value(materialState, "textureUrl", "TextureUrl", null)));
+        return material;
+    },
+    meshPhysical(state, materialState) {
+        const material = new THREE.MeshPhysicalMaterial({
+            color: value(materialState, "color", "Color", "#00a2ff"),
+            metalness: value(materialState, "metalness", "Metalness", 0.1),
+            roughness: value(materialState, "roughness", "Roughness", 0.6),
+            clearcoat: value(materialState, "clearcoat", "Clearcoat", 0),
+            clearcoatRoughness: value(materialState, "clearcoatRoughness", "ClearcoatRoughness", 0),
+            transmission: value(materialState, "transmission", "Transmission", 0),
+            ior: value(materialState, "ior", "Ior", 1.5),
+            reflectivity: value(materialState, "reflectivity", "Reflectivity", 0.5)
+        });
+
+        applyTexture(material, "map", resolveTexture(state, value(materialState, "textureUrl", "TextureUrl", null)));
+        return material;
+    },
+    meshStandard(state, materialState) {
+        const material = new THREE.MeshStandardMaterial({
+            color: value(materialState, "color", "Color", "#00a2ff"),
+            metalness: value(materialState, "metalness", "Metalness", 0.1),
+            roughness: value(materialState, "roughness", "Roughness", 0.6)
+        });
+
+        applyTexture(material, "map", resolveTexture(state, value(materialState, "textureUrl", "TextureUrl", null)));
+        return material;
+    },
+    meshToon(state, materialState) {
+        const material = new THREE.MeshToonMaterial({
+            color: value(materialState, "color", "Color", "#00a2ff")
+        });
+
+        applyTexture(material, "map", resolveTexture(state, value(materialState, "textureUrl", "TextureUrl", null)));
+        applyTexture(material, "gradientMap", resolveTexture(state, value(materialState, "gradientMapUrl", "GradientMapUrl", null)));
+        return material;
+    }
+});
+
 export function buildMaterial(state, meshState) {
     const materialState = value(meshState, "material", "Material", {});
     const kind = value(materialState, "kind", "Kind", "meshStandard");
-
-    let material;
-
-    switch (kind) {
-        case "meshBasic": {
-            material = new THREE.MeshBasicMaterial({
-                color: value(materialState, "color", "Color", "#00a2ff"),
-                wireframe: value(materialState, "wireframe", "Wireframe", false)
-            });
-
-            const map = resolveTexture(state, value(materialState, "textureUrl", "TextureUrl", null));
-            if (map) {
-                material.map = map;
-                material.needsUpdate = true;
-            }
-
-            break;
-        }
-        case "meshLambert": {
-            material = new THREE.MeshLambertMaterial({
-                color: value(materialState, "color", "Color", "#00a2ff"),
-                emissive: value(materialState, "emissive", "Emissive", "#000000")
-            });
-
-            const map = resolveTexture(state, value(materialState, "textureUrl", "TextureUrl", null));
-            if (map) {
-                material.map = map;
-                material.needsUpdate = true;
-            }
-
-            break;
-        }
-        case "meshMatcap": {
-            material = new THREE.MeshMatcapMaterial({
-                color: value(materialState, "color", "Color", "#ffffff")
-            });
-
-            const matcap = resolveTexture(state, value(materialState, "matcapUrl", "MatcapUrl", null));
-            if (matcap) {
-                material.matcap = matcap;
-                material.needsUpdate = true;
-            }
-
-            break;
-        }
-        case "meshNormal": {
-            material = new THREE.MeshNormalMaterial({
-                wireframe: value(materialState, "wireframe", "Wireframe", false),
-                flatShading: value(materialState, "flatShading", "FlatShading", false)
-            });
-            break;
-        }
-        case "meshPhong": {
-            material = new THREE.MeshPhongMaterial({
-                color: value(materialState, "color", "Color", "#00a2ff"),
-                emissive: value(materialState, "emissive", "Emissive", "#000000"),
-                specular: value(materialState, "specular", "Specular", "#111111"),
-                shininess: value(materialState, "shininess", "Shininess", 30)
-            });
-
-            const map = resolveTexture(state, value(materialState, "textureUrl", "TextureUrl", null));
-            if (map) {
-                material.map = map;
-                material.needsUpdate = true;
-            }
-
-            break;
-        }
-        case "meshPhysical": {
-            material = new THREE.MeshPhysicalMaterial({
-                color: value(materialState, "color", "Color", "#00a2ff"),
-                metalness: value(materialState, "metalness", "Metalness", 0.1),
-                roughness: value(materialState, "roughness", "Roughness", 0.6),
-                clearcoat: value(materialState, "clearcoat", "Clearcoat", 0),
-                clearcoatRoughness: value(materialState, "clearcoatRoughness", "ClearcoatRoughness", 0),
-                transmission: value(materialState, "transmission", "Transmission", 0),
-                ior: value(materialState, "ior", "Ior", 1.5),
-                reflectivity: value(materialState, "reflectivity", "Reflectivity", 0.5)
-            });
-
-            const map = resolveTexture(state, value(materialState, "textureUrl", "TextureUrl", null));
-            if (map) {
-                material.map = map;
-                material.needsUpdate = true;
-            }
-
-            break;
-        }
-        case "meshToon": {
-            material = new THREE.MeshToonMaterial({
-                color: value(materialState, "color", "Color", "#00a2ff")
-            });
-
-            const map = resolveTexture(state, value(materialState, "textureUrl", "TextureUrl", null));
-            if (map) {
-                material.map = map;
-                material.needsUpdate = true;
-            }
-
-            const gradientMap = resolveTexture(state, value(materialState, "gradientMapUrl", "GradientMapUrl", null));
-            if (gradientMap) {
-                material.gradientMap = gradientMap;
-                material.needsUpdate = true;
-            }
-
-            break;
-        }
-        case "meshStandard":
-        default: {
-            material = new THREE.MeshStandardMaterial({
-                color: value(materialState, "color", "Color", "#00a2ff"),
-                metalness: value(materialState, "metalness", "Metalness", 0.1),
-                roughness: value(materialState, "roughness", "Roughness", 0.6)
-            });
-
-            const map = resolveTexture(state, value(materialState, "textureUrl", "TextureUrl", null));
-            if (map) {
-                material.map = map;
-                material.needsUpdate = true;
-            }
-
-            break;
-        }
-    }
-
-    return material;
+    const builder = materialBuilders[kind] ?? materialBuilders.meshStandard;
+    return builder(state, materialState);
 }
 
 export function ensureCamera(state, cameraState) {

@@ -3,7 +3,7 @@ namespace BlazorThree.Engine;
 /// Represents transition state.
 /// </summary>
 
-internal sealed class TransitionState
+public sealed class TransitionState
 {
     /// <summary>
     /// Gets or sets the property.

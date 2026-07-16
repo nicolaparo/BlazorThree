@@ -3,7 +3,7 @@ namespace BlazorThree.Engine;
 /// <summary>
 /// Represents a keyframe entry in a host animation.
 /// </summary>
-internal sealed class AnimationKeyframeState
+public sealed class AnimationKeyframeState
 {
     /// <summary>
     /// Gets or sets the stable keyframe identifier.

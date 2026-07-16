@@ -77,35 +77,14 @@ internal sealed class SceneDeltaState
 
     public IReadOnlyCollection<string> DispatchableElementMouseLeaveKeys { get; init; } = Array.Empty<string>();
     /// <summary>
-    /// Gets or sets the upsert groups.
+    /// Gets or sets node states that should be upserted.
     /// </summary>
+    public IReadOnlyList<ISceneNodeState> UpsertNodes { get; init; } = Array.Empty<ISceneNodeState>();
 
-    public IReadOnlyList<GroupState> UpsertGroups { get; init; } = Array.Empty<GroupState>();
     /// <summary>
-    /// Gets or sets the remove group ids.
+    /// Gets or sets node identifiers that should be removed.
     /// </summary>
-
-    public IReadOnlyCollection<string> RemoveGroupIds { get; init; } = Array.Empty<string>();
-    /// <summary>
-    /// Gets or sets the upsert meshes.
-    /// </summary>
-
-    public IReadOnlyList<MeshState> UpsertMeshes { get; init; } = Array.Empty<MeshState>();
-    /// <summary>
-    /// Gets or sets the remove mesh ids.
-    /// </summary>
-
-    public IReadOnlyCollection<string> RemoveMeshIds { get; init; } = Array.Empty<string>();
-    /// <summary>
-    /// Gets or sets the upsert models.
-    /// </summary>
-
-    public IReadOnlyList<ModelState> UpsertModels { get; init; } = Array.Empty<ModelState>();
-    /// <summary>
-    /// Gets or sets the remove model ids.
-    /// </summary>
-
-    public IReadOnlyCollection<string> RemoveModelIds { get; init; } = Array.Empty<string>();
+    public IReadOnlyList<SceneNodeKey> RemoveNodes { get; init; } = Array.Empty<SceneNodeKey>();
 
     public bool HasChanges =>
         IsFull
@@ -115,10 +94,6 @@ internal sealed class SceneDeltaState
         || RemoveLightIds.Count > 0
         || OrbitControlsChanged
         || InteractionChanged
-        || UpsertGroups.Count > 0
-        || RemoveGroupIds.Count > 0
-        || UpsertMeshes.Count > 0
-        || RemoveMeshIds.Count > 0
-        || UpsertModels.Count > 0
-        || RemoveModelIds.Count > 0;
+        || UpsertNodes.Count > 0
+        || RemoveNodes.Count > 0;
 }
