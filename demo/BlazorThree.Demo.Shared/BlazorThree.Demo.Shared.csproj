@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="BlazorThree" Version="0.1.0-preview" />
+    <ProjectReference Include="..\..\src\BlazorThree\BlazorThree.csproj" />
   </ItemGroup>
 
 </Project>

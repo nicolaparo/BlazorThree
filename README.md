@@ -9,8 +9,8 @@ BlazorThree is a .NET 10 Razor Class Library for building Three.js scenes with d
 
 Live demo: https://nicolaparo.github.io/BlazorThree-demo
 
-![BlazorThree demo 1](docs/res/demo-1.png)
-![BlazorThree demo 2](docs/res/demo-2.png)
+![BlazorThree demo 1](docs/res/demo-1.gif)
+![BlazorThree demo 2](docs/res/demo-2.gif)
 
 ## Why BlazorThree
 
