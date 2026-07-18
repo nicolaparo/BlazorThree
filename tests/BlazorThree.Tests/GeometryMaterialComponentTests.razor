@@ -4,7 +4,7 @@
 @using BlazorThree.Materials
 @using Bunit
 @using Microsoft.AspNetCore.Components
-@inherits TestContext
+@inherits BunitContext
 
 @code {
     public static TheoryData<Type, string> GeometryCases => new()
@@ -78,7 +78,7 @@
     {
         var scene = new SceneContext();
 
-        RenderComponent<CascadingValue<SceneContext>>(parameters => parameters
+        Render<CascadingValue<SceneContext>>(parameters => parameters
             .Add(c => c.Value, scene)
             .AddChildContent<CascadingValue<NodeContainerContext>>(root => root
                 .Add(c => c.Value, new NodeContainerContext())

@@ -6,13 +6,13 @@
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Web
 @using System.Numerics
-@inherits TestContext
+@inherits BunitContext
 
 @code {
     [Fact]
     public void OrbitControls_ThrowsWhenNotInsideCamera()
     {
-        var ex = Assert.ThrowsAny<Exception>(() => RenderComponent<OrbitControls>());
+        var ex = Assert.ThrowsAny<Exception>(() => Render<OrbitControls>());
         Assert.Contains("must be nested inside Camera", ex.InnerException?.Message ?? ex.Message, StringComparison.Ordinal);
     }
 
@@ -110,7 +110,7 @@
         var cut = RenderScene(scene, @<Light Id="light-a" />).FindComponent<Light>();
         _ = scene.ConsumePendingChanges();
 
-        cut.SetParametersAndRender(builder => builder.Add(light => light.Id, "light-b"));
+        cut.Render(builder => builder.Add(light => light.Id, "light-b"));
 
         var delta = scene.ConsumePendingChanges();
 
@@ -129,7 +129,7 @@
         </Mesh>).FindComponent<Mesh>();
         _ = scene.ConsumePendingChanges();
 
-        cut.SetParametersAndRender(parameters => parameters
+        cut.Render(parameters => parameters
             .Add(mesh => mesh.Id, "mesh-b")
             .Add(mesh => mesh.ChildContent, meshContent));
 
@@ -267,7 +267,7 @@
         Assert.Empty(published!.Keyframes);
     }
 
-    private IRenderedFragment RenderScene(SceneContext scene, RenderFragment childContent)
+    private IRenderedComponent<IComponent> RenderScene(SceneContext scene, RenderFragment childContent)
     {
         var nodeContainer = new NodeContainerContext();
         return Render(@<CascadingValue Value="scene">

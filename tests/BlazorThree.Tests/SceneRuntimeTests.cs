@@ -63,6 +63,43 @@ public sealed class SceneRuntimeTests(DemoServerFixture fixture) : IClassFixture
         await Assertions.Expect(page.Locator("#scene-click-count")).ToHaveTextAsync("2");
     }
 
+    [Fact]
+    public async Task PlaywrightScenePage_ResizingHostContainer_ResizesCanvas()
+    {
+        await using var session = await CreateSessionAsync();
+        var page = session.Page;
+
+        await page.GotoAsync($"{fixture.BaseUrl}/playwright-scene-tests");
+        await WaitForCanvasAsync(session);
+
+        await page.EvaluateAsync("""
+            () => {
+                const host = document.querySelector('#playwright-scene-shell > div');
+                if (!host) {
+                    return;
+                }
+
+                host.style.width = '320px';
+                host.style.height = '240px';
+            }
+            """);
+
+        await page.WaitForFunctionAsync("""
+            () => {
+                const host = document.querySelector('#playwright-scene-shell > div');
+                const canvas = document.querySelector('#playwright-scene-shell canvas');
+                if (!host || !canvas) {
+                    return false;
+                }
+
+                return host.clientWidth === 320
+                    && host.clientHeight === 240
+                    && canvas.clientWidth === host.clientWidth
+                    && canvas.clientHeight === host.clientHeight;
+            }
+            """);
+    }
+
     private static async Task<BrowserSession> CreateSessionAsync()
     {
         var playwright = await Playwright.CreateAsync();

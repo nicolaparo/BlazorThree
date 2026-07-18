@@ -280,6 +280,32 @@ function render(state) {
     state.renderer.render(state.scene, state.camera);
 }
 
+function resizeScene(state, force = false) {
+    const width = state.hostElement.clientWidth || 1;
+    const height = state.hostElement.clientHeight || 1;
+
+    if (!force && state.viewportWidth === width && state.viewportHeight === height) {
+        return;
+    }
+
+    state.viewportWidth = width;
+    state.viewportHeight = height;
+
+    if (state.camera) {
+        state.camera.aspect = width / height;
+        state.camera.updateProjectionMatrix();
+    }
+
+    state.renderer.setSize(width, height);
+    applyBackgroundTextureSizing(state, width, height);
+
+    if (state.orbitControls) {
+        state.orbitControls.update();
+    }
+
+    render(state);
+}
+
 function emitAnimationEvent(state, phase, payload) {
     if (!state.dotNetRef?.invokeMethodAsync || !payload?.animationId) {
         return;
@@ -505,11 +531,14 @@ export function initScene(hostElement, options, dotNetRef) {
         cameraChannels: [],
         cameraLookAtTarget: null,
         frameHandle: 0,
+        viewportWidth: 0,
+        viewportHeight: 0,
         resizeObserver: null,
         dotNetRef,
         handlePointerMove: null,
         handlePointerLeave: null,
         handlePointerClick: null,
+        handleWindowResize: null,
         pointerHoverAttached: false,
         pointerClickAttached: false
     };
@@ -530,6 +559,9 @@ export function initScene(hostElement, options, dotNetRef) {
     state.handlePointerMove = event => handlePointerMove(state, event);
     state.handlePointerLeave = () => clearHover(state);
     state.handlePointerClick = event => handlePointerClick(state, event);
+    state.handleWindowResize = () => resizeScene(state);
+
+    window.addEventListener("resize", state.handleWindowResize);
 
     const animate = () => {
         state.frameHandle = requestAnimationFrame(animate);
@@ -573,19 +605,11 @@ export function initScene(hostElement, options, dotNetRef) {
     };
 
     state.resizeObserver = new ResizeObserver(() => {
-        const width = hostElement.clientWidth || 1;
-        const height = hostElement.clientHeight || 1;
-        state.camera.aspect = width / height;
-        state.camera.updateProjectionMatrix();
-        state.renderer.setSize(width, height);
-        applyBackgroundTextureSizing(state, width, height);
-        if (state.orbitControls) {
-            state.orbitControls.update();
-        }
-        render(state);
+        resizeScene(state);
     });
 
     state.resizeObserver.observe(hostElement);
+    resizeScene(state, true);
     animate();
 
     scenes.set(sceneId, state);
@@ -697,6 +721,9 @@ export function disposeScene(sceneId) {
 
     cancelAnimationFrame(state.frameHandle);
     state.resizeObserver?.disconnect();
+    if (state.handleWindowResize) {
+        window.removeEventListener("resize", state.handleWindowResize);
+    }
     clearHover(state);
 
     const canvas = state.renderer.domElement;
