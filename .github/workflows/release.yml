@@ -23,6 +23,13 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Checkout demo publish repository
+        uses: actions/checkout@v4
+        with:
+          repository: nicolaparo/BlazorThree-demo
+          token: ${{ secrets.DEMO_REPO_TOKEN }}
+          path: BlazorThree-demo
+
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
@@ -59,6 +66,18 @@ jobs:
             --source "https://api.nuget.org/v3/index.json" \
             --api-key "${{ secrets.NUGET_API_KEY }}" \
             --skip-duplicate
+
+      - name: Configure git identity for demo publish
+        run: |
+          git -C BlazorThree-demo config user.name "github-actions[bot]"
+          git -C BlazorThree-demo config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Publish demo site to GitHub Pages repository
+        shell: pwsh
+        run: |
+          ./scripts/publish-blazor-wasm-ghpages.ps1 `
+            -TargetRepoPath "BlazorThree-demo" `
+            -CommitMessage "Publish demo for ${{ github.ref_name }}"
 
       - name: Create draft GitHub release
         uses: softprops/action-gh-release@v2
