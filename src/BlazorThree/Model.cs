@@ -30,6 +30,12 @@ public class Model : Object3d, IDisposable
     public string SourceUrl { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets an optional texture URL override applied to mesh materials within the loaded model.
+    /// </summary>
+    [Parameter]
+    public string? TextureUrl { get; set; }
+
+    /// <summary>
     /// Gets or sets the class name used to target this node from runtime animations.
     /// </summary>
     [Parameter]
@@ -185,6 +191,7 @@ public class Model : Object3d, IDisposable
             Id = modelId,
             ParentId = NodeContainer?.ParentId,
             SourceUrl = SourceUrl,
+            TextureUrl = TextureUrl,
             ClassName = ClassName,
             Transitions = GetOrderedTransitions(),
             Animations = GetOrderedAnimations(),

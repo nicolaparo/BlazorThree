@@ -29,4 +29,9 @@ internal sealed class MeshStandardMaterialDefinition : MaterialDefinition
     /// </summary>
 
     public double Roughness { get; init; } = 0.6;
+
+    /// <summary>
+    /// Gets or sets whether the material renders both front and back faces.
+    /// </summary>
+    public bool DoubleSided { get; init; }
 }

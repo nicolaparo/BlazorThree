@@ -1,5 +1,5 @@
-import * as THREE from "https://esm.sh/three@0.178.0";
-import { OrbitControls } from "https://esm.sh/three@0.178.0/examples/jsm/controls/OrbitControls";
+import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { buildCamera, ensureCamera, ensureLight, updateCameraAnimation, updateLightAnimation } from "./blazorthree/assets.js";
 import { clearSceneNodes, disposeGroupRecord, disposeMeshRecord, disposeModelRecord, syncGroups, syncMeshes, syncModels, updateMeshStyleAnimation, updateModelPlayback } from "./blazorthree/nodes.js";
 import { now, value } from "./blazorthree/shared.js";

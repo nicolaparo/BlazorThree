@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    env:
+      DOTNET_VERSION: "10.0.x"
+      PACKAGE_PROJECT: src/BlazorThree/BlazorThree.csproj
+      PACKAGE_OUTPUT_DIR: artifacts/nuget
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Compute package version from tag
+        shell: bash
+        run: |
+          TAG_NAME="${GITHUB_REF_NAME}"
+          PACKAGE_VERSION="${TAG_NAME#v}"
+          echo "PACKAGE_VERSION=${PACKAGE_VERSION}" >> "$GITHUB_ENV"
+
+      - name: Restore
+        run: dotnet restore BlazorThree.slnx
+
+      - name: Build solution
+        run: dotnet build BlazorThree.slnx --configuration Release --no-restore
+
+      - name: Run tests
+        run: dotnet test BlazorThree.slnx --configuration Release --no-build --verbosity normal
+
+      - name: Pack NuGet package
+        run: |
+          dotnet pack ${{ env.PACKAGE_PROJECT }} \
+            --configuration Release \
+            --no-build \
+            -p:ContinuousIntegrationBuild=true \
+            -p:PackageVersion=${{ env.PACKAGE_VERSION }} \
+            --output ${{ env.PACKAGE_OUTPUT_DIR }}
+
+      - name: Publish package to NuGet.org
+        run: |
+          dotnet nuget push "${{ env.PACKAGE_OUTPUT_DIR }}/*.nupkg" \
+            --source "https://api.nuget.org/v3/index.json" \
+            --api-key "${{ secrets.NUGET_API_KEY }}" \
+            --skip-duplicate
+
+      - name: Create draft GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          generate_release_notes: true
+          files: |
+            ${{ env.PACKAGE_OUTPUT_DIR }}/*.nupkg

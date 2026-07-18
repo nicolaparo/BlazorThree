@@ -26,6 +26,12 @@ internal sealed class ModelState : ISceneNodeState
     /// </summary>
 
     public string SourceUrl { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Gets or sets an optional texture url override for model materials.
+    /// </summary>
+    public string? TextureUrl { get; set; }
+
     /// <summary>
     /// Gets or sets the class name.
     /// </summary>

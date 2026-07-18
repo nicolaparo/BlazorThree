@@ -1,0 +1,12 @@
+{
+  "name": "blazorthree-runtime-build",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build:runtime": "node scripts/build-runtime.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.9",
+    "three": "0.178.0"
+  }
+}

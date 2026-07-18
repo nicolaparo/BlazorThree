@@ -35,6 +35,7 @@ internal static class WireStateCompactor
         ["dampingFactor"] = "df",
         ["depth"] = "d",
         ["detail"] = "dt",
+        ["doubleSided"] = "ds",
         ["durationMs"] = "du",
         ["easing"] = "ea",
         ["emissive"] = "em",

@@ -83,7 +83,20 @@ Import the namespaces where you author scenes, typically in `_Imports.razor`:
 @using BlazorThree.Materials
 ```
 
-No service registration is required. `Scene` loads the JavaScript bridge automatically from `_content/BlazorThree/blazorthree.js`.
+No service registration is required. `Scene` loads the JavaScript bridge automatically from `_content/BlazorThree/blazorthree.bundle.js`.
+
+## Runtime dependency strategy
+
+BlazorThree ships a bundled browser runtime that includes the pinned Three.js dependency and required loaders. This keeps production deployments deterministic and avoids runtime CDN dependencies.
+
+When changing runtime JavaScript or upgrading Three.js, rebuild the bundled artifact:
+
+```bash
+npm install
+npm run build:runtime
+```
+
+This writes `src/BlazorThree/wwwroot/blazorthree.bundle.js`, which is the only runtime entry loaded by `Scene`.
 
 ## Quick start
 

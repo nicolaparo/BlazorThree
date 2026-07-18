@@ -25,6 +25,7 @@ const compactAliases = Object.freeze({
     dampingFactor: "df",
     depth: "d",
     detail: "dt",
+    doubleSided: "ds",
     durationMs: "du",
     easing: "ea",
     emissive: "em",

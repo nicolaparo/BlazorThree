@@ -39,6 +39,13 @@ public class MeshStandardMaterial : TransitionScopedComponentBase
     [Parameter]
     public double Roughness { get; set; } = 0.6;
 
+    /// <summary>
+    /// Gets or sets whether the material renders both front and back faces.
+    /// </summary>
+    [Animatable]
+    [Parameter]
+    public bool DoubleSided { get; set; }
+
     protected override void OnParametersSet()
     {
         MeshContext?.SetMaterial?.Invoke(new MeshStandardMaterialDefinition
@@ -46,7 +53,8 @@ public class MeshStandardMaterial : TransitionScopedComponentBase
             Color = Color,
             TextureUrl = TextureUrl,
             Metalness = Metalness,
-            Roughness = Roughness
+            Roughness = Roughness,
+            DoubleSided = DoubleSided
         });
     }
 }

@@ -27,4 +27,15 @@
     <None Include="..\README.md" Pack="true" PackagePath="\" Link="README.md" />
   </ItemGroup>
 
+  <PropertyGroup>
+    <RuntimeBuildRoot>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)\..\..'))</RuntimeBuildRoot>
+  </PropertyGroup>
+
+  <Target Name="BuildBlazorThreeRuntimeBundle"
+          BeforeTargets="Build"
+          Condition="'$(DesignTimeBuild)' != 'true' and Exists('$(RuntimeBuildRoot)\package.json')">
+    <Message Importance="High" Text="Building BlazorThree runtime bundle (npm run build:runtime)..." />
+    <Exec Command="npm run build:runtime" WorkingDirectory="$(RuntimeBuildRoot)" />
+  </Target>
+
 </Project>

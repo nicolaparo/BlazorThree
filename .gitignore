@@ -30,6 +30,9 @@ Thumbs.db
 # Logs
 *.log
 
+# Node
+node_modules/
+
 # exe, dll, and other binary files
 *.exe
 *.dll

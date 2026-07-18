@@ -1,7 +1,9 @@
-import * as THREE from "https://esm.sh/three@0.178.0";
-import { ColladaLoader } from "https://esm.sh/three@0.178.0/examples/jsm/loaders/ColladaLoader";
-import { FBXLoader } from "https://esm.sh/three@0.178.0/examples/jsm/loaders/FBXLoader";
-import { GLTFLoader } from "https://esm.sh/three@0.178.0/examples/jsm/loaders/GLTFLoader";
+import * as THREE from "three";
+import { ColladaLoader } from "three/examples/jsm/loaders/ColladaLoader.js";
+import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { MTLLoader } from "three/examples/jsm/loaders/MTLLoader.js";
+import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
 import { buildGeometry, buildMaterial } from "./assets.js";
 import { ease, readBaseTransform, readVector3, signature, value } from "./shared.js";
 import { applyRecordTarget } from "./animations.js";
@@ -209,16 +211,23 @@ function applyMeshVisualStates(state, record, geometryState, materialState, outl
 
     const nextGeometrySignature = signature(geometryState);
     if (record.geometrySignature !== nextGeometrySignature) {
-        const geometryUpdatedInPlace = applyGeometryStateInPlace(record, geometryState);
-        if (!geometryUpdatedInPlace) {
-            const geometry = buildGeometry({ geometry: geometryState });
-            record.mesh.geometry.dispose();
-            record.mesh.geometry = geometry;
+        const geometryKind = String(value(geometryState, "kind", "Kind", "")).toLowerCase();
+        if (geometryKind === "model") {
+            loadModelGeometry(state, record, geometryState, outlineState);
             record.geometryMorph = null;
+        } else {
+            record.modelGeometrySourceSignature = "";
+            const geometryUpdatedInPlace = applyGeometryStateInPlace(record, geometryState);
+            if (!geometryUpdatedInPlace) {
+                const geometry = buildGeometry({ geometry: geometryState });
+                record.mesh.geometry.dispose();
+                record.mesh.geometry = geometry;
+                record.geometryMorph = null;
+            }
+            geometryChanged = true;
         }
 
         record.geometrySignature = nextGeometrySignature;
-        geometryChanged = true;
     }
 
     const nextMaterialSignature = signature(materialState);
@@ -243,6 +252,101 @@ function applyMeshVisualStates(state, record, geometryState, materialState, outl
 
         record.outlineSignature = nextOutlineSignature;
     }
+}
+
+function findMeshNode(root, meshName) {
+    if (!root) {
+        return null;
+    }
+
+    const normalizedName = typeof meshName === "string" ? meshName.trim() : "";
+    let firstMesh = null;
+    let namedMesh = null;
+
+    root.traverse(node => {
+        if (!node.isMesh || !node.geometry) {
+            return;
+        }
+
+        if (!firstMesh) {
+            firstMesh = node;
+        }
+
+        if (normalizedName && node.name === normalizedName) {
+            namedMesh = node;
+        }
+    });
+
+    return namedMesh || firstMesh;
+}
+
+function extractModelGeometry(root, meshName) {
+    if (!root) {
+        return null;
+    }
+
+    root.updateMatrixWorld(true);
+    const meshNode = findMeshNode(root, meshName);
+    if (!meshNode || !meshNode.geometry) {
+        return null;
+    }
+
+    const geometry = meshNode.geometry.clone();
+    geometry.applyMatrix4(meshNode.matrixWorld);
+    geometry.computeVertexNormals();
+    geometry.computeBoundingBox();
+    geometry.computeBoundingSphere();
+    return geometry;
+}
+
+function loadModelGeometry(state, record, geometryState, outlineState) {
+    const sourceUrl = value(geometryState, "sourceUrl", "SourceUrl", "").trim();
+    const meshName = value(geometryState, "meshName", "MeshName", null);
+    const sourceSignature = signature({ sourceUrl, meshName });
+
+    if (record.modelGeometrySourceSignature === sourceSignature) {
+        return;
+    }
+
+    record.modelGeometrySourceSignature = sourceSignature;
+    record.geometryLoadToken += 1;
+    const currentToken = record.geometryLoadToken;
+
+    if (!sourceUrl) {
+        return;
+    }
+
+    loadModelAsset(sourceUrl)
+        .then(asset => {
+            const disposeAsset = () => disposeObjectTree(asset.root);
+            if (record.geometryLoadToken !== currentToken) {
+                disposeAsset();
+                return;
+            }
+
+            const nextGeometry = extractModelGeometry(asset.root, meshName);
+            disposeAsset();
+
+            if (!nextGeometry) {
+                console.error("Failed to extract mesh geometry from model", sourceUrl, meshName);
+                return;
+            }
+
+            record.mesh.geometry.dispose();
+            record.mesh.geometry = nextGeometry;
+
+            if (outlineState) {
+                applyOutline(record, outlineState);
+                record.outlineSignature = signature(outlineState);
+            }
+        })
+        .catch(error => {
+            if (record.geometryLoadToken !== currentToken) {
+                return;
+            }
+
+            console.error("Failed to load model geometry", sourceUrl, error);
+        });
 }
 
 function getTransitionLeafKeys(entries) {
@@ -370,6 +474,7 @@ function applyMaterialStateInPlace(record, materialState) {
         "specular",
         "metalness",
         "roughness",
+        "doubleSided",
         "clearcoat",
         "clearcoatRoughness",
         "transmission",
@@ -400,6 +505,12 @@ function applyMaterialStateInPlace(record, materialState) {
 
         if (typeof target === "boolean" && typeof raw === "boolean") {
             material[key] = raw;
+            material.needsUpdate = true;
+            continue;
+        }
+
+        if (key === "doubleSided" && typeof raw === "boolean") {
+            material.side = raw ? THREE.DoubleSide : THREE.FrontSide;
             material.needsUpdate = true;
         }
     }
@@ -580,7 +691,94 @@ function replaceModelRoot(record, nextRoot) {
     if (nextRoot) {
         record.container.add(nextRoot);
         record.bonesByName = indexBones(nextRoot);
+
+        if (record.modelTexture) {
+            applyTextureToModelRoot(nextRoot, record.modelTexture);
+        }
     }
+}
+
+function applyTextureToMaterial(material, texture) {
+    if (!material || !material.isMaterial) {
+        return;
+    }
+
+    material.map = texture;
+    material.needsUpdate = true;
+}
+
+function applyTextureToModelRoot(root, texture) {
+    if (!root) {
+        return;
+    }
+
+    root.traverse(node => {
+        if (!node.isMesh) {
+            return;
+        }
+
+        if (Array.isArray(node.material)) {
+            for (const material of node.material) {
+                applyTextureToMaterial(material, texture);
+            }
+            return;
+        }
+
+        applyTextureToMaterial(node.material, texture);
+    });
+}
+
+function disposeModelTexture(record) {
+    if (!record.modelTexture) {
+        return;
+    }
+
+    record.modelTexture.dispose();
+    record.modelTexture = null;
+}
+
+function applyModelTexture(record, textureUrl) {
+    const nextTextureSignature = signature(textureUrl || "");
+    if (record.textureSignature === nextTextureSignature) {
+        return;
+    }
+
+    record.textureSignature = nextTextureSignature;
+    record.textureLoadToken += 1;
+    const currentToken = record.textureLoadToken;
+
+    if (!textureUrl) {
+        disposeModelTexture(record);
+        return;
+    }
+
+    const loader = new THREE.TextureLoader();
+    loader.load(
+        textureUrl,
+        texture => {
+            if (record.textureLoadToken !== currentToken) {
+                texture.dispose();
+                return;
+            }
+
+            texture.colorSpace = THREE.SRGBColorSpace;
+            disposeModelTexture(record);
+            record.modelTexture = texture;
+
+            if (record.modelRoot) {
+                applyTextureToModelRoot(record.modelRoot, texture);
+            }
+        },
+        undefined,
+        error => {
+            if (record.textureLoadToken !== currentToken) {
+                return;
+            }
+
+            console.error("Failed to load model texture", textureUrl, error);
+            disposeModelTexture(record);
+        }
+    );
 }
 
 function loadModelAsset(sourceUrl) {
@@ -622,6 +820,30 @@ function loadModelAsset(sourceUrl) {
                 undefined,
                 onError
             );
+            return;
+        }
+
+        if (normalized.endsWith(".obj")) {
+            const objLoader = new OBJLoader();
+            const mtlUrl = sourceUrl.replace(/\.obj(?:\?.*)?$/i, ".mtl");
+            const resourcePath = sourceUrl.slice(0, sourceUrl.lastIndexOf("/") + 1);
+            const mtlLoader = new MTLLoader();
+            mtlLoader.setResourcePath(resourcePath);
+
+            mtlLoader.load(
+                mtlUrl,
+                materials => {
+                    materials.preload();
+                    objLoader.setMaterials(materials);
+                    objLoader.load(sourceUrl, object3D => resolve({ root: object3D, clips: [] }), undefined, onError);
+                },
+                undefined,
+                () => {
+                    // Fall back to OBJ-only rendering when no MTL file is found.
+                    objLoader.load(sourceUrl, object3D => resolve({ root: object3D, clips: [] }), undefined, onError);
+                }
+            );
+
             return;
         }
 
@@ -869,6 +1091,7 @@ export function disposeMeshRecord(record) {
 }
 
 export function disposeModelRecord(record) {
+    disposeModelTexture(record);
     replaceModelRoot(record, null);
     record.container.parent?.remove(record.container);
 }
@@ -974,7 +1197,9 @@ export function syncMeshes(state, meshes) {
                 transitionMap: new Map(),
                 geometrySignature: "",
                 materialSignature: "",
-                outlineSignature: ""
+                outlineSignature: "",
+                geometryLoadToken: 0,
+                modelGeometrySourceSignature: ""
             };
             state.meshes.set(meshId, record);
         }
@@ -1012,6 +1237,7 @@ export function syncModels(state, models) {
                 container,
                 object3D: container,
                 modelRoot: null,
+                modelTexture: null,
                 className: null,
                 targetSignature: "",
                 animation: null,
@@ -1019,7 +1245,9 @@ export function syncModels(state, models) {
                 baseTransform: null,
                 transitionMap: new Map(),
                 sourceSignature: "",
+                textureSignature: "",
                 loadToken: 0,
+                textureLoadToken: 0,
                 animationMixer: null,
                 animationClips: [],
                 activeAction: null,
@@ -1039,6 +1267,7 @@ export function syncModels(state, models) {
         attachToParent(getParentObject(state, parentId), record.container);
 
         const sourceUrl = value(modelState, "sourceUrl", "SourceUrl", "").trim();
+        const textureUrl = value(modelState, "textureUrl", "TextureUrl", "").trim();
         const nextSourceSignature = signature(sourceUrl);
         if (record.sourceSignature !== nextSourceSignature) {
             record.sourceSignature = nextSourceSignature;
@@ -1061,6 +1290,7 @@ export function syncModels(state, models) {
                         record.animationMixer = asset.clips.length ? new THREE.AnimationMixer(asset.root) : null;
                         record.lastMixerTimestamp = performance.now();
                         record.animationSignature = "";
+                        applyModelTexture(record, textureUrl);
                         publishModelClips(state, record, modelId, sourceUrl);
                     })
                     .catch(error => {
@@ -1074,6 +1304,8 @@ export function syncModels(state, models) {
                     });
             }
         }
+
+        applyModelTexture(record, textureUrl);
 
         const className = value(modelState, "className", "ClassName", null);
         record.className = className;

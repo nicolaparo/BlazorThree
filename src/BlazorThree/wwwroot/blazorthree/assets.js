@@ -1,4 +1,4 @@
-import * as THREE from "https://esm.sh/three@0.178.0";
+import * as THREE from "three";
 import { ease, readVector3, signature, value } from "./shared.js";
 
 function parseColor(colorValue) {
@@ -547,7 +547,8 @@ const materialBuilders = Object.freeze({
         const material = new THREE.MeshStandardMaterial({
             color: value(materialState, "color", "Color", "#00a2ff"),
             metalness: value(materialState, "metalness", "Metalness", 0.1),
-            roughness: value(materialState, "roughness", "Roughness", 0.6)
+            roughness: value(materialState, "roughness", "Roughness", 0.6),
+            side: value(materialState, "doubleSided", "DoubleSided", false) ? THREE.DoubleSide : THREE.FrontSide
         });
 
         applyTexture(material, "map", resolveTexture(state, value(materialState, "textureUrl", "TextureUrl", null)));

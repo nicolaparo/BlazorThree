@@ -115,7 +115,7 @@ public partial class Scene
             return;
         }
 
-        module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/BlazorThree/blazorthree.js");
+        module = await JS.InvokeAsync<IJSObjectReference>("import", "./_content/BlazorThree/blazorthree.bundle.js");
         dotNetReference = DotNetObjectReference.Create(this);
         sceneId = await module.InvokeAsync<string>(
             "initScene",

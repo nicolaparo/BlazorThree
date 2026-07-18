@@ -1,0 +1,95 @@
+@page "/chess"
+@using BlazorThree.Engine
+
+<PageTitle>Chess Demo</PageTitle>
+
+<Scene Width="100%" Height="100%" ClearColor="#0d1422">
+    <Camera Fov="46" Position="new(0f, 9.8f, 11.8f)" LookAt="new(0f, 0.8f, 0f)">
+        <OrbitControls Enabled="true" EnableDamping="true" DampingFactor="0.08" />
+    </Camera>
+
+    <Light Type="LightDefinitions.Ambient" Color="#d8e3ff" Intensity="0.52" />
+    <Light Type="LightDefinitions.Directional" Color="#fff4d9" Intensity="2.1" Position="new(6f, 10f, 4f)" />
+    <Light Type="LightDefinitions.Point" Color="#9fc6ff" Intensity="16" Position="new(-5f, 4f, -5f)" />
+
+    @for (var row = 0; row < 8; row++)
+    {
+        @for (var col = 0; col < 8; col++)
+        {
+            var isLightSquare = (row + col) % 2 == 0;
+            var x = (col - 3.5f) * FileSpacing;
+            var z = (row - 3.5f) * RankSpacing;
+
+            <Mesh Position="new(x, 0f, z)">
+                <BoxGeometry Width="SquareSize" Height="0.15" Depth="SquareSize" />
+                <MeshStandardMaterial Color="@(isLightSquare ? "#e9ddc9" : "#6f4d39")" Roughness="0.87" Metalness="0.06" />
+            </Mesh>
+        }
+    }
+
+    <Mesh Position="new(0f, -0.12f, 0f)">
+        <BoxGeometry Width="9.2" Height="0.2" Depth="9.2" />
+        <MeshStandardMaterial Color="#2a1f1b" Roughness="0.9" Metalness="0.04" />
+    </Mesh>
+
+    @foreach (var piece in Pieces)
+    {
+        <Mesh Position="piece.Position" Scale="new(PieceScale, PieceScale, PieceScale)">
+            <ModelGeometry SourceUrl="@piece.SourceUrl" />
+            <MeshStandardMaterial Color="@piece.Color" TextureUrl="@PieceTextureUrl" Roughness="0.85" Metalness="0.08" DoubleSided="true" />
+        </Mesh>
+    }
+</Scene>
+
+@code {
+    private const string PieceTextureUrl = "_content/BlazorThree.Demo.Shared/textures/chess_texture.png";
+    private const string WhiteColor = "#e8dcc8";
+    private const string BlackColor = "#3d2b1f";
+    private const float PieceScale = 0.4f;
+    private const float SquareSize = 1f;
+    private const float RankSpacing = 1.04f;
+    private const float FileSpacing = 1.04f;
+    private const float PieceHeightOffset = 0.66f * PieceScale;
+
+    private readonly IReadOnlyList<ChessPiecePlacement> Pieces = BuildInitialPosition();
+
+    private static IReadOnlyList<ChessPiecePlacement> BuildInitialPosition()
+    {
+        var pieces = new List<ChessPiecePlacement>();
+
+        for (var file = 0; file < 8; file++)
+        {
+            pieces.Add(new ChessPiecePlacement("_content/BlazorThree.Demo.Shared/models/White Pawn.dae", ToBoardPosition(file, rank: 1), WhiteColor));
+            pieces.Add(new ChessPiecePlacement("_content/BlazorThree.Demo.Shared/models/Black Pawn.dae", ToBoardPosition(file, rank: 6), BlackColor));
+        }
+
+        pieces.Add(new ChessPiecePlacement("_content/BlazorThree.Demo.Shared/models/White Rook.dae", ToBoardPosition(0, 0), WhiteColor));
+        pieces.Add(new ChessPiecePlacement("_content/BlazorThree.Demo.Shared/models/White Knight.dae", ToBoardPosition(1, 0), WhiteColor));
+        pieces.Add(new ChessPiecePlacement("_content/BlazorThree.Demo.Shared/models/White Bishop.dae", ToBoardPosition(2, 0), WhiteColor));
+        pieces.Add(new ChessPiecePlacement("_content/BlazorThree.Demo.Shared/models/White Queen.dae", ToBoardPosition(3, 0), WhiteColor));
+        pieces.Add(new ChessPiecePlacement("_content/BlazorThree.Demo.Shared/models/White King.dae", ToBoardPosition(4, 0), WhiteColor));
+        pieces.Add(new ChessPiecePlacement("_content/BlazorThree.Demo.Shared/models/White Bishop.dae", ToBoardPosition(5, 0), WhiteColor));
+        pieces.Add(new ChessPiecePlacement("_content/BlazorThree.Demo.Shared/models/White Knight.dae", ToBoardPosition(6, 0), WhiteColor));
+        pieces.Add(new ChessPiecePlacement("_content/BlazorThree.Demo.Shared/models/White Rook.dae", ToBoardPosition(7, 0), WhiteColor));
+
+        pieces.Add(new ChessPiecePlacement("_content/BlazorThree.Demo.Shared/models/Black Rook.dae", ToBoardPosition(0, 7), BlackColor));
+        pieces.Add(new ChessPiecePlacement("_content/BlazorThree.Demo.Shared/models/Black Knight.dae", ToBoardPosition(1, 7), BlackColor));
+        pieces.Add(new ChessPiecePlacement("_content/BlazorThree.Demo.Shared/models/Black Bishop.dae", ToBoardPosition(2, 7), BlackColor));
+        pieces.Add(new ChessPiecePlacement("_content/BlazorThree.Demo.Shared/models/Black Queen.dae", ToBoardPosition(3, 7), BlackColor));
+        pieces.Add(new ChessPiecePlacement("_content/BlazorThree.Demo.Shared/models/Black King.dae", ToBoardPosition(4, 7), BlackColor));
+        pieces.Add(new ChessPiecePlacement("_content/BlazorThree.Demo.Shared/models/Black Bishop.dae", ToBoardPosition(5, 7), BlackColor));
+        pieces.Add(new ChessPiecePlacement("_content/BlazorThree.Demo.Shared/models/Black Knight.dae", ToBoardPosition(6, 7), BlackColor));
+        pieces.Add(new ChessPiecePlacement("_content/BlazorThree.Demo.Shared/models/Black Rook.dae", ToBoardPosition(7, 7), BlackColor));
+
+        return pieces;
+    }
+
+    private static Vector3 ToBoardPosition(int file, int rank)
+    {
+        var x = (file - 3.5f) * FileSpacing;
+        var z = (rank - 3.5f) * RankSpacing;
+        return new Vector3(x, PieceHeightOffset, z);
+    }
+
+    private sealed record ChessPiecePlacement(string SourceUrl, Vector3 Position, string Color);
+}
