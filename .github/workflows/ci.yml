@@ -19,8 +19,24 @@ jobs:
         with:
           dotnet-version: 10.0.x
 
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Node dependencies
+        run: npm ci
+
       - name: Restore
         run: dotnet restore BlazorThree.slnx
 
       - name: Build solution
         run: dotnet build BlazorThree.slnx --configuration Release --no-restore
+
+      - name: Install Playwright Chromium
+        run: |
+          dotnet tool install --global Microsoft.Playwright.CLI
+          playwright install chromium
+
+      - name: Run tests
+        run: dotnet test BlazorThree.slnx --configuration Release --no-build --verbosity normal

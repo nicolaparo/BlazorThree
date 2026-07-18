@@ -1,0 +1,106 @@
+@using BlazorThree
+@using BlazorThree.Engine
+@using BlazorThree.Geometries
+@using BlazorThree.Materials
+@using Bunit
+@using Microsoft.AspNetCore.Components
+@inherits TestContext
+
+@code {
+    public static TheoryData<Type, string> GeometryCases => new()
+    {
+        { typeof(BoxGeometry), "box" },
+        { typeof(CapsuleGeometry), "capsule" },
+        { typeof(CircleGeometry), "circle" },
+        { typeof(ConeGeometry), "cone" },
+        { typeof(CylinderGeometry), "cylinder" },
+        { typeof(DodecahedronGeometry), "dodecahedron" },
+        { typeof(EdgesGeometry), "edges" },
+        { typeof(ExtrudeGeometry), "extrude" },
+        { typeof(IcosahedronGeometry), "icosahedron" },
+        { typeof(LatheGeometry), "lathe" },
+        { typeof(ModelGeometry), "model" },
+        { typeof(OctahedronGeometry), "octahedron" },
+        { typeof(PlaneGeometry), "plane" },
+        { typeof(PolyhedronGeometry), "polyhedron" },
+        { typeof(RingGeometry), "ring" },
+        { typeof(ShapeGeometry), "shape" },
+        { typeof(SphereGeometry), "sphere" },
+        { typeof(TetrahedronGeometry), "tetrahedron" },
+        { typeof(TorusGeometry), "torus" },
+        { typeof(TorusKnotGeometry), "torusKnot" },
+        { typeof(TubeGeometry), "tube" },
+        { typeof(WireframeGeometry), "wireframe" }
+    };
+
+    public static TheoryData<Type, string> MaterialCases => new()
+    {
+        { typeof(MeshBasicMaterial), "meshBasic" },
+        { typeof(MeshLambertMaterial), "meshLambert" },
+        { typeof(MeshMatcapMaterial), "meshMatcap" },
+        { typeof(MeshNormalMaterial), "meshNormal" },
+        { typeof(MeshPhongMaterial), "meshPhong" },
+        { typeof(MeshPhysicalMaterial), "meshPhysical" },
+        { typeof(MeshStandardMaterial), "meshStandard" },
+        { typeof(MeshToonMaterial), "meshToon" }
+    };
+
+    [Theory]
+    [MemberData(nameof(GeometryCases))]
+    public void GeometryComponent_PublishesExpectedKind(Type geometryType, string expectedKind)
+    {
+        var scene = new SceneContext();
+
+        RenderMesh(scene, geometryType, typeof(MeshStandardMaterial));
+
+        var state = scene.BuildState();
+        var mesh = Assert.Single(state.Meshes);
+        var geometry = Assert.IsAssignableFrom<GeometryDefinition>(mesh.Geometry);
+        Assert.Equal(expectedKind, geometry.Kind);
+    }
+
+    [Theory]
+    [MemberData(nameof(MaterialCases))]
+    public void MaterialComponent_PublishesExpectedKind(Type materialType, string expectedKind)
+    {
+        var scene = new SceneContext();
+
+        RenderMesh(scene, typeof(BoxGeometry), materialType);
+
+        var state = scene.BuildState();
+        var mesh = Assert.Single(state.Meshes);
+        var material = Assert.IsAssignableFrom<MaterialDefinition>(mesh.Material);
+        Assert.Equal(expectedKind, material.Kind);
+    }
+
+    [Fact]
+    public void Mesh_WithoutChildOverrides_UsesDefaultGeometryAndMaterial()
+    {
+        var scene = new SceneContext();
+
+        RenderComponent<CascadingValue<SceneContext>>(parameters => parameters
+            .Add(c => c.Value, scene)
+            .AddChildContent<CascadingValue<NodeContainerContext>>(root => root
+                .Add(c => c.Value, new NodeContainerContext())
+                .AddChildContent<Mesh>()));
+
+        var mesh = Assert.Single(scene.BuildState().Meshes);
+
+        Assert.Equal("box", ((GeometryDefinition)mesh.Geometry).Kind);
+        Assert.Equal("meshStandard", ((MaterialDefinition)mesh.Material).Kind);
+    }
+
+    private void RenderMesh(SceneContext scene, Type geometryType, Type materialType)
+    {
+        var nodeContainer = new NodeContainerContext();
+
+        Render(@<CascadingValue Value="scene">
+            <CascadingValue Value="nodeContainer">
+                <Mesh>
+                    <DynamicComponent Type="geometryType" />
+                    <DynamicComponent Type="materialType" />
+                </Mesh>
+            </CascadingValue>
+        </CascadingValue>);
+    }
+}

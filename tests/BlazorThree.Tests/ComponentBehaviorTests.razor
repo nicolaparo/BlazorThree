@@ -1,0 +1,279 @@
+@using BlazorThree
+@using BlazorThree.Engine
+@using BlazorThree.Geometries
+@using BlazorThree.Materials
+@using Bunit
+@using Microsoft.AspNetCore.Components
+@using Microsoft.AspNetCore.Components.Web
+@using System.Numerics
+@inherits TestContext
+
+@code {
+    [Fact]
+    public void OrbitControls_ThrowsWhenNotInsideCamera()
+    {
+        var ex = Assert.ThrowsAny<Exception>(() => RenderComponent<OrbitControls>());
+        Assert.Contains("must be nested inside Camera", ex.InnerException?.Message ?? ex.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Camera_WithOrbitControls_PublishesControlState()
+    {
+        var scene = new SceneContext();
+
+        RenderScene(scene, @<Camera>
+            <OrbitControls Enabled="true" DampingFactor="0.2" />
+        </Camera>);
+
+        var state = scene.BuildState();
+        Assert.True(state.OrbitControls.Enabled);
+        Assert.True(state.OrbitControls.EnableDamping);
+        Assert.Equal(0.2, state.OrbitControls.DampingFactor);
+    }
+
+    [Fact]
+    public void Camera_RemovingOrbitControls_ResetsControlState()
+    {
+        var scene = new SceneContext();
+
+        var cut = RenderScene(scene, @<Camera>
+            <OrbitControls Enabled="true" DampingFactor="0.2" />
+        </Camera>);
+
+        Assert.True(scene.BuildState().OrbitControls.Enabled);
+
+        cut.FindComponent<OrbitControls>().Instance.Dispose();
+
+        var orbit = scene.BuildState().OrbitControls;
+        Assert.False(orbit.Enabled);
+        Assert.True(orbit.EnableDamping);
+        Assert.Equal(0.08d, orbit.DampingFactor);
+    }
+
+    [Fact]
+    public void Mesh_GroupAndModel_PublishExpectedState()
+    {
+        var scene = new SceneContext();
+
+        RenderScene(scene, @<Group Id="group-1">
+            <Mesh Id="mesh-1">
+                <BoxGeometry Width="3" />
+                <MeshBasicMaterial Color="#ff00ff" />
+                <Outline Opacity="0.6" />
+            </Mesh>
+
+            <Model Id="model-1" SourceUrl="/models/fox.glb">
+                <BonePose BoneName="Spine" Rotation="new Vector3(1, 2, 3)" />
+            </Model>
+        </Group>);
+
+        var state = scene.BuildState();
+        Assert.Single(state.Groups);
+        Assert.Single(state.Meshes);
+        Assert.Single(state.Models);
+
+        var mesh = state.Meshes[0];
+        Assert.Equal("group-1", mesh.ParentId);
+        Assert.Equal("box", ((GeometryDefinition)mesh.Geometry).Kind);
+        Assert.Equal("meshBasic", ((MaterialDefinition)mesh.Material).Kind);
+        Assert.Equal(0.6, mesh.Outline?.Opacity);
+
+        var model = state.Models[0];
+        Assert.Equal("group-1", model.ParentId);
+        Assert.Equal("/models/fox.glb", model.SourceUrl);
+        Assert.Single(model.BonePoses);
+        Assert.Equal("Spine", model.BonePoses[0].BoneName);
+    }
+
+    [Fact]
+    public void Transition_InGeometryScope_ResolvesToScopedProperty()
+    {
+        var scene = new SceneContext();
+
+        RenderScene(scene, @<Mesh Id="mesh-1">
+            <BoxGeometry>
+                <Transition Property="Width" />
+            </BoxGeometry>
+        </Mesh>);
+
+        var mesh = scene.BuildState().Meshes.Single();
+        var transition = mesh.Transitions.Single();
+
+        Assert.Equal("geometry.width", transition.Property);
+    }
+
+    [Fact]
+    public void Light_ReplacingId_RemovesPreviousLight()
+    {
+        var scene = new SceneContext();
+
+        var cut = RenderScene(scene, @<Light Id="light-a" />).FindComponent<Light>();
+        _ = scene.ConsumePendingChanges();
+
+        cut.SetParametersAndRender(builder => builder.Add(light => light.Id, "light-b"));
+
+        var delta = scene.ConsumePendingChanges();
+
+        Assert.Contains("light-a", delta.RemoveLightIds);
+        Assert.Contains(delta.UpsertLights, light => light.Id == "light-b");
+    }
+
+    [Fact]
+    public void Mesh_ReplacingId_RemovesPreviousNode()
+    {
+        var scene = new SceneContext();
+        RenderFragment meshContent = @<BoxGeometry />;
+
+        var cut = RenderScene(scene, @<Mesh Id="mesh-a">
+            <BoxGeometry />
+        </Mesh>).FindComponent<Mesh>();
+        _ = scene.ConsumePendingChanges();
+
+        cut.SetParametersAndRender(parameters => parameters
+            .Add(mesh => mesh.Id, "mesh-b")
+            .Add(mesh => mesh.ChildContent, meshContent));
+
+        var delta = scene.ConsumePendingChanges();
+        var removed = Assert.Single(delta.RemoveNodes);
+        var upserted = Assert.Single(delta.UpsertNodes.OfType<MeshState>());
+
+        Assert.Equal(SceneNodeKinds.Mesh, removed.Kind);
+        Assert.Equal("mesh-a", removed.Id);
+        Assert.Equal("mesh-b", upserted.Id);
+    }
+
+    [Fact]
+    public void BonePose_WithoutBoneName_RemovesEntry()
+    {
+        var scene = new SceneContext();
+
+        RenderScene(scene, @<Model Id="model-1" SourceUrl="/models/robot.glb">
+            <BonePose />
+        </Model>);
+
+        Assert.Empty(scene.BuildState().Models.Single().BonePoses);
+    }
+
+    [Fact]
+    public void Model_ParameterBonePose_OverridesChildBonePoseByBoneName()
+    {
+        var scene = new SceneContext();
+        var parameterBonePoses = new[]
+        {
+            new BonePoseState
+            {
+                BoneName = "Spine",
+                Rotation = new Vector3(9, 8, 7)
+            }
+        };
+
+        RenderScene(scene, @<Model Id="model-1" SourceUrl="/models/robot.glb" BonePoses="parameterBonePoses">
+            <BonePose BoneName="Spine" Rotation="new Vector3(1, 2, 3)" />
+        </Model>);
+
+        var pose = Assert.Single(scene.BuildState().Models.Single().BonePoses);
+        Assert.Equal("Spine", pose.BoneName);
+        Assert.Equal(new Vector3(9, 8, 7), pose.Rotation);
+    }
+
+    [Fact]
+    public async Task Mesh_OnClick_IsInvokedThroughSceneContextDispatch()
+    {
+        var scene = new SceneContext();
+        SceneElementMouseEventArgs? received = null;
+
+        RenderScene(scene, @<Mesh Id="mesh-1" OnClick="@(args => received = args)">
+            <BoxGeometry />
+        </Mesh>);
+
+        await scene.DispatchElementClickAsync("mesh-1", SceneNodeKinds.Mesh);
+
+        Assert.NotNull(received);
+        Assert.Equal("mesh-1", received!.ElementId);
+        Assert.Equal(SceneNodeKinds.Mesh, received.ElementType);
+    }
+
+    [Fact]
+    public void Transition_PropertiesArray_DeduplicatesAndScopesMaterialProperties()
+    {
+        var scene = new SceneContext();
+        var transitionProperties = new[] { "Color", "material.color", " color " };
+
+        RenderScene(scene, @<Mesh Id="mesh-1">
+            <MeshStandardMaterial>
+                <Transition Properties="transitionProperties" />
+            </MeshStandardMaterial>
+        </Mesh>);
+
+        var transitions = scene.BuildState().Meshes.Single().Transitions;
+        var transition = Assert.Single(transitions);
+
+        Assert.Equal("material.color", transition.Property);
+    }
+
+    [Fact]
+    public void AnimationAndKeyframe_PublishNormalizedKeyframes()
+    {
+        var host = new TransitionHostContext();
+        AnimationState? published = null;
+        host.UpsertAnimation = animation => published = animation;
+
+        var scope = new TransitionScopeContext
+        {
+            Host = host,
+            AllowedPropertyRoots = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "position",
+                "rotation"
+            }
+        };
+
+        Render(@<CascadingValue Value="scope">
+            <Animation DurationMs="-5">
+                <Keyframe Property="Position" Offset="120" Value="new Vector3(2, 3, 4)" />
+            </Animation>
+        </CascadingValue>);
+
+        Assert.NotNull(published);
+        Assert.Equal(1, published!.DurationMs);
+        Assert.Single(published.Keyframes);
+        Assert.Equal("position", published.Keyframes[0].Property);
+        Assert.Equal(100d, published.Keyframes[0].Offset);
+    }
+
+    [Fact]
+    public void Animation_IgnoresKeyframesOutsideAllowedScope()
+    {
+        var host = new TransitionHostContext();
+        AnimationState? published = null;
+        host.UpsertAnimation = animation => published = animation;
+
+        var scope = new TransitionScopeContext
+        {
+            Host = host,
+            AllowedPropertyRoots = new HashSet<string>(StringComparer.Ordinal)
+            {
+                "position"
+            }
+        };
+
+        Render(@<CascadingValue Value="scope">
+            <Animation>
+                <Keyframe Property="Rotation" Offset="50" Value="new Vector3(1, 0, 0)" />
+            </Animation>
+        </CascadingValue>);
+
+        Assert.NotNull(published);
+        Assert.Empty(published!.Keyframes);
+    }
+
+    private IRenderedFragment RenderScene(SceneContext scene, RenderFragment childContent)
+    {
+        var nodeContainer = new NodeContainerContext();
+        return Render(@<CascadingValue Value="scene">
+            <CascadingValue Value="nodeContainer">
+                @childContent
+            </CascadingValue>
+        </CascadingValue>);
+    }
+}

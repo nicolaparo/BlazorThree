@@ -1,0 +1,121 @@
+<PageTitle>Playwright Scene Tests</PageTitle>
+
+<div class="playwright-test-page">
+    <h1>Playwright Scene Harness</h1>
+
+    <div class="playwright-controls">
+        <button id="toggle-cube" type="button" @onclick="ToggleCube">Toggle Cube</button>
+        <button id="toggle-clear-color" type="button" @onclick="ToggleClearColor">Toggle Clear Color</button>
+    </div>
+
+    <div id="playwright-scene-shell">
+        <Scene Width="480px"
+               Height="360px"
+               ClearColor="@clearColor"
+               OnClick="HandleSceneClick"
+               OnMouseEnter="HandleSceneMouseEnter"
+               OnMouseLeave="HandleSceneMouseLeave">
+            <Camera Position="new Vector3(0f, 0f, 6f)" />
+
+            @if (cubeVisible)
+            {
+                <Mesh Id="cube"
+                      OnClick="HandleCubeClick"
+                      OnMouseEnter="HandleCubeMouseEnter"
+                      OnMouseLeave="HandleCubeMouseLeave">
+                    <BoxGeometry Width="2" Height="2" Depth="2" />
+                    <MeshBasicMaterial Color="#00ff66" />
+                </Mesh>
+            }
+        </Scene>
+    </div>
+
+    <div class="playwright-readout">
+        <div id="scene-click-count">@sceneClickCount</div>
+        <div id="scene-enter-count">@sceneMouseEnterCount</div>
+        <div id="scene-leave-count">@sceneMouseLeaveCount</div>
+        <div id="cube-click-count">@cubeClickCount</div>
+        <div id="cube-enter-count">@cubeMouseEnterCount</div>
+        <div id="cube-leave-count">@cubeMouseLeaveCount</div>
+        <div id="last-picked-element">@lastPickedElement</div>
+        <div id="cube-visible">@cubeVisible.ToString().ToLowerInvariant()</div>
+        <div id="clear-color">@clearColor</div>
+    </div>
+</div>
+
+<style>
+    .playwright-test-page {
+        display: grid;
+        gap: 1rem;
+        padding: 1rem;
+    }
+
+    .playwright-controls {
+        display: flex;
+        gap: 0.75rem;
+    }
+
+    .playwright-readout {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 180px));
+        gap: 0.5rem 1rem;
+        font-family: Consolas, monospace;
+    }
+</style>
+
+@code {
+    private string clearColor = "#102030";
+    private bool cubeVisible = true;
+    private int sceneClickCount;
+    private int sceneMouseEnterCount;
+    private int sceneMouseLeaveCount;
+    private int cubeClickCount;
+    private int cubeMouseEnterCount;
+    private int cubeMouseLeaveCount;
+    private string lastPickedElement = "none";
+
+    private void ToggleCube()
+    {
+        cubeVisible = !cubeVisible;
+    }
+
+    private void ToggleClearColor()
+    {
+        clearColor = string.Equals(clearColor, "#102030", StringComparison.Ordinal)
+            ? "#203040"
+            : "#102030";
+    }
+
+    private void HandleSceneClick(MouseEventArgs _)
+    {
+        sceneClickCount++;
+    }
+
+    private void HandleSceneMouseEnter(MouseEventArgs _)
+    {
+        sceneMouseEnterCount++;
+    }
+
+    private void HandleSceneMouseLeave(MouseEventArgs _)
+    {
+        sceneMouseLeaveCount++;
+    }
+
+    private void HandleCubeClick(SceneElementMouseEventArgs args)
+    {
+        cubeClickCount++;
+        lastPickedElement = args.ElementId;
+    }
+
+    private void HandleCubeMouseEnter(SceneElementMouseEventArgs args)
+    {
+        cubeMouseEnterCount++;
+        lastPickedElement = $"enter:{args.ElementId}";
+    }
+
+    private void HandleCubeMouseLeave(SceneElementMouseEventArgs args)
+    {
+        cubeMouseLeaveCount++;
+        lastPickedElement = $"leave:{args.ElementId}";
+    }
+}
